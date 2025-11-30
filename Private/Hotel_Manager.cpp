@@ -1506,7 +1506,7 @@ void UHotel_Manager::SaveGameLevelOption()
     // 실제 디스크 저장                 
     if (HotelSaveGameOption && IsValid(HotelSaveGameOption))
     {
-        UGameplayStatics::SaveGameToSlot(HotelSaveGameOption, TEXT("PlayerSaveSlot"), 0);
+      // UGameplayStatics::SaveGameToSlot(HotelSaveGameOption, TEXT("PlayerSaveSlot"), 0);
     }
     else
     {
