@@ -4,6 +4,7 @@
 #include "PhoneDialUI.h"
 #include "Kismet/GameplayStatics.h"
 #include "Hotel_Phone.h"
+#include "Components/Image.h"
 
 void UPhoneDialUI::PressDial(int Num)
 {
@@ -64,6 +65,11 @@ void UPhoneDialUI::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     }
 
 }
+void UPhoneDialUI::ReturnDial() 
+{
+    UE_LOG(LogTemp, Warning, TEXT("개 씨발새끼야 어디 안돌아가나 보자 씨발년"));
+    RotationAngle = 0; 
+};
 
 
 void UPhoneDialUI::PutDownPhone()

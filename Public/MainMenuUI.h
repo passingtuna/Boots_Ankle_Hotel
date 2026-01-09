@@ -4,16 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
-#include "OptionMenuUI.h"
-#include "Components/CanvasPanel.h" 
-#include "Components/TextBlock.h"
 #include "MainMenuUI.generated.h"
 
 /**
  * 
  */
+class UOptionMenuUI;
 class AHotel_Walker;
+class UCanvasPanel;
+class UTextBlock;
+
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UMainMenuUI : public UUserWidget
 {
@@ -23,6 +23,7 @@ private:
     float DayOpacity;
     int WalkingDay;
 
+    int testint = 0;
 public:
     void NativeConstruct() override;
     void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;

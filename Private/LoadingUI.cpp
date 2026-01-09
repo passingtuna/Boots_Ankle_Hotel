@@ -2,6 +2,8 @@
 
 
 #include "LoadingUI.h"
+#include "Components/Image.h"
+#include "Components/CanvasPanel.h"
 
 
 

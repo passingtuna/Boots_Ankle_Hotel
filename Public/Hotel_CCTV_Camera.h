@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/SceneCaptureComponent2D.h"
 #include "Hotel_CCTV_Camera.generated.h"
+
+class USceneCaptureComponent2D;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_CCTV_Camera : public AActor

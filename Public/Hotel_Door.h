@@ -3,16 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/TextRenderComponent.h"
-#include "Camera/CameraComponent.h"
-#include "Components/BoxComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "Hotel_Object.h"
 #include "Hotel_Door.generated.h"
 
 /**
  * 
  */
+class UTextRenderComponent;
+class UCameraComponent;
+class UBoxComponent;
+class USpringArmComponent;
 class AHotel_Guest;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Door : public AHotel_Object

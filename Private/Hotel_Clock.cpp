@@ -4,6 +4,7 @@
 #include "Hotel_Clock.h"
 #include "Hotel_Manager.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/TextBlock.h"
 
 
 
@@ -62,13 +63,17 @@ void AHotel_Clock::AddMinute()
 
 void AHotel_Clock::StartGameClock()
 {
-    GetWorld()->GetTimerManager().SetTimer(ClockTimer, this, &AHotel_Clock::AddMinute, 1.0, true);//2초에 1분씩
+    GetWorld()->GetTimerManager().SetTimer(ClockTimer, this, &AHotel_Clock::AddMinute, 2.0, true);//1초에 1분씩
     nGameTime = 1290;//게임시작 21시30분 
     nNextEventTime = 1290 + 30 + FMath::RandRange(0,20); //10시~10시 20분 사이 랜덤으로 첫 이벤트 시작
 
     nGameTime = nNextEventTime;
 }
 
+void AHotel_Clock::StopGameClock()
+{
+    GetWorld()->GetTimerManager().ClearTimer(ClockTimer);
+}
 
 void AHotel_Clock::SetHighLightInteractive(bool OnOff) //시계는 하이라이트 하지않는다
 {

@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/LightComponent.h"
 #include "Hotel_Light.generated.h"
 
+class ULightComponent;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Light : public AActor
 {

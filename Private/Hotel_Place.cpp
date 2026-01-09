@@ -5,6 +5,10 @@
 #include "Hotel_Walker.h"
 #include "Hotel_Guest_Room.h"
 #include "Hotel_Manager.h"
+#include "Hotel_Guest.h"
+#include "Hotel_Switch.h"
+#include "Hotel_CCTV_Camera.h"
+#include "Components/BoxComponent.h"
 
 // Sets default values
 AHotel_Place::AHotel_Place()

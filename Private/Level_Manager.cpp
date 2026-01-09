@@ -4,8 +4,18 @@
 #include "Level_Manager.h"
 #include "Hotel_Manager.h"
 #include "GameFramework/Controller.h"
+#include "LevelSequencePlayer.h"
+#include "LevelSequence.h"
 #include "Components/AudioComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/DirectionalLight.h"
+#include "MainMenuUI.h"
+#include "LoadingUI.h"
+#include "Hotel_Walker.h"
+#include "GameEndReportUI.h"
+#include "LevelSequenceActor.h"
+#include "Components/EditableTextBox.h"
+
 // Sets default values
 ALevel_Manager::ALevel_Manager()
 {
@@ -183,4 +193,10 @@ void ALevel_Manager::RingingBell()
         AudioCompRinging->SetSound(RingSoundEffect);
         AudioCompRinging->Play();
     }
+}
+void ALevel_Manager::PlayFireSequence()
+{
+    ULevelSequencePlayer* Player = SAEndGame->GetSequencePlayer();
+    Player->OnFinished.AddDynamic(this, &ALevel_Manager::LoadEndingLevel);
+    Player->Play();
 }

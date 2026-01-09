@@ -6,6 +6,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Hotel_Walker.h"
+#include "Components/Button.h"
+#include "OptionMenuUI.h"
+#include "Components/CanvasPanel.h" 
+#include "Components/TextBlock.h"
+#include "Hotel_Manager.h"
 
 
 void UMainMenuUI::NativeConstruct()
@@ -63,13 +68,16 @@ void UMainMenuUI::OptionButtonAction()
 }
 void UMainMenuUI::ExitButtonAction()
 {
+    testint++;
+    GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->UpdateDefualtLevelMenual(testint);
+    /*
     APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
     UKismetSystemLibrary::QuitGame(
         GetWorld(),
         PC,
         EQuitPreference::Quit,
         true
-    );
+    );*/
 }
 
 void UMainMenuUI::ViewMenualButtonAction()

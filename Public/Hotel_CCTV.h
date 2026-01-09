@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/TextRenderComponent.h"
 #include "Hotel_Object.h"
-#include "Hotel_CCTV_Camera.h"
 #include "Hotel_CCTV.generated.h"
 
 /**
  * 
  */
+class AHotel_CCTV_Camera;
+class UTextRenderComponent;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_CCTV : public AHotel_Object
 {

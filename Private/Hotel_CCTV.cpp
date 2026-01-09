@@ -6,6 +6,8 @@
 #include "Hotel_CCTV.h"
 #include "Hotel_Manager.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Components/TextRenderComponent.h"
+#include "Hotel_CCTV_Camera.h"
 
 void AHotel_CCTV::BeginPlay()
 {
@@ -47,7 +49,6 @@ int AHotel_CCTV::FindCameraNumByName(FName Name)
     {
         if (IsValid(arrCameras[i]))
         {
-            UE_LOG(LogTemp, Warning, TEXT("파인드 카뭬라 %s = %s"), *Name.ToString(), *arrCameras[i]->CameraName.ToString());
             if (arrCameras[i]->CameraName == Name)
             {
                 return i;
@@ -67,6 +68,7 @@ void AHotel_CCTV::ViewPrevCamera()
         nNowCameraNum = PrevCameraIndex;
         MoniterText->SetText(FText::FromString(TEXT("CAMERA ") + arrCameras[nNowCameraNum]->CameraName.ToString()));
     }
+    Hotel_Manager->MinusHRScore(60, TEXT("근무 태도 불량"));
 }
 void AHotel_CCTV::ViewNextCamera()
 {
@@ -78,6 +80,8 @@ void AHotel_CCTV::ViewNextCamera()
         nNowCameraNum = NextCameraIndex;
         MoniterText->SetText(FText::FromString(TEXT("CAMERA ") + arrCameras[nNowCameraNum]->CameraName.ToString()));
     }
+
+    Hotel_Manager->UpdateDefualtLevelMenual(NextCameraIndex);
 }
 
 void AHotel_CCTV::ViewIndexCamera(int Index)
@@ -105,8 +109,9 @@ void AHotel_CCTV::SetHiddenObject(AActor * HiddenActor)
 {
     for (const auto& Elem : arrCameras)
     {
+        if (!Elem)return;
         USceneCaptureComponent2D* CaptureComp = Elem->CameraComp;
-        CaptureComp->HiddenActors.Add(HiddenActor);
+        if(CaptureComp) CaptureComp->HiddenActors.Add(HiddenActor);
     }
 }
 

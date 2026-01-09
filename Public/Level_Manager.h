@@ -4,13 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/DirectionalLight.h"
-#include "MainMenuUI.h"
-#include "LoadingUI.h"
-#include "Hotel_Walker.h"
-#include "GameEndReportUI.h"
-#include "Components/EditableTextBox.h"
 #include "Level_Manager.generated.h"
+
+class APlayerController;
+class UHotel_Manager;
+class ADirectionalLight;
+class UMainMenuUI;
+class ULoadingUI;
+class UGameEndReportUI;
+class ALevelSequenceActor;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API ALevel_Manager : public AActor
@@ -31,6 +33,8 @@ protected:
 
 public:
     void LoadMainLevel();
+
+    UFUNCTION()
     void LoadEndingLevel();
 
     void ViewLevelUI(int uIType);
@@ -41,6 +45,8 @@ public:
     void LoadMainComplete();
     UFUNCTION()
     void LoadEndingComplete();
+
+    void PlayFireSequence();
 
     void RingingBell();
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
@@ -68,4 +74,7 @@ public:
     USoundBase* SoundEffectMap;
     UPROPERTY(EditAnyWhere, BlueprintReadOnly, Category = Sound)
     USoundBase* RingSoundEffect;
+
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = LevelSequence)
+    ALevelSequenceActor* SAEndGame;
 };

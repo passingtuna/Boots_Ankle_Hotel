@@ -26,7 +26,16 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AI_Hotel_Guest_Default.h"
-
+#include "DialogueDataAsset.h"
+#include "GuestDataAsset.h"
+#include "Hotel_Operator.h"
+#include "Hotel_CCTV.h"
+#include "Hotel_Light.h"
+#include "Hotel_StaticMesh.h"
+#include "Hotel_Door.h"
+#include "Hotel_CCTV_Camera.h"
+#include "Camera/CameraComponent.h"
+#include "MainMenuUI.h"
 
 void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -129,6 +138,13 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
     tempEFI.isExcutingOnlyEvent = false;
     arrEventFuntionList.Add(tempEFI);
 
+    tempEFI.EventID = 9;
+    tempEFI.ExecuteTiming = FET_Init;
+    tempEFI.ExecuteFunction = [this](FEventInfo* eventInfo) {ExecuteEvent_Guest_InvisibleCamera(eventInfo); };
+    tempEFI.CheckClearFunction = [this](FEventInfo* eventInfo, FName trigger) { return CheckClear_Guest_InvisibleCamera(eventInfo, trigger); };
+    tempEFI.isEventOnlyOnce = false;
+    tempEFI.isExcutingOnlyEvent = false;
+    arrEventFuntionList.Add(tempEFI);
 
     ////////////랜덤 실행 이벤트 정의
 
@@ -159,7 +175,13 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
     tempEFI.isEventOnlyOnce = false;
     tempEFI.isExcutingOnlyEvent = true;
     mapOutbreakEventFuntion.Add(FName("MakeDirtyRoom"), tempEFI);
-    
+
+    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
+    tempEFI.ExecuteTiming = FET_Init;
+    tempEFI.ExecuteFunction = [this](FEventInfo* eventInfo) {Execute_Only_Imposter_Request_Reject_Check(eventInfo); };
+    tempEFI.isEventOnlyOnce = false;
+    tempEFI.isExcutingOnlyEvent = true;
+    mapOutbreakEventFuntion.Add(FName("Impostor_Request_Reject_CheckIn"), tempEFI);
     SettingInitGame(false);
 }
 FGuestname UHotel_Manager::GetGenderName(bool isMan)
@@ -181,43 +203,18 @@ FGuestname UHotel_Manager::GetGenderName(bool isMan)
 
 FString UHotel_Manager::GetCodeWord()
 {
-    switch (CodeWord)
-    {
-        case 0: return TEXT("앞코"); break;
-        case 1: return TEXT("뒷굽"); break;
-        case 2: return TEXT("부츠끈"); break;
-        case 3: return TEXT("혀"); break;
-        case 4: return TEXT("목통"); break;
-        case 5: return TEXT("밑창"); break;
-        case 6: return TEXT("덧창"); break;
-        case 7: return TEXT("깔창"); break;
-        case 8: return TEXT("안창"); break;
-        case 9: return TEXT("장식못"); break;
-        default: return ""; break;
-    }
+    return CodeWords.IsValidIndex(CodeWord) ? CodeWords[CodeWord] : TEXT("");
 }
 FString UHotel_Manager::GetWrongCodeWord()
 {
-    int WrongCodeWord = FMath::RandRange(0, 8); //잘못된 암구어를 알려주기위해
-    if (WrongCodeWord >= CodeWord)
+   int WrongIndex = 0;
+
+    while (WrongIndex == CodeWord)
     {
-        WrongCodeWord++;
+        WrongIndex = FMath::RandRange(0, CodeWords.Num() - 1);
     }
 
-    switch (CodeWord)
-    {
-        case 0: return TEXT("앞코"); break;
-        case 1: return TEXT("뒷굽"); break;
-        case 2: return TEXT("부츠끈"); break;
-        case 3: return TEXT("혀"); break;
-        case 4: return TEXT("목통"); break;
-        case 5: return TEXT("밑창"); break;
-        case 6: return TEXT("덧창"); break;
-        case 7: return TEXT("깔창"); break;
-        case 8: return TEXT("안창"); break;
-        case 9: return TEXT("장식못"); break;
-        default: return ""; break;
-    }
+    return CodeWords[WrongIndex];
 }
 
 
@@ -306,6 +303,7 @@ void UHotel_Manager::SpawnGuest()
             temp->EventGuest = NewGuest;
             arrWaitingEventList.Add(temp);
             arrEventGuestController.Add(GetWorld()->SpawnActor<AAI_Hotel_Guest_Default>());
+            arrHotelGuest.Add(NewGuest);
         }
     }
 }
@@ -313,65 +311,104 @@ void UHotel_Manager::SettingEvent()
 {
     int nRandRange = arrEventFuntionList.Num() - 1;
     int nEventGuestNum;
-    nEventGuestNum = 16;//테스트용 nEventGuestNum = EnviromentLevel * 4 + 4;
 
-   // UE_LOG(LogTemp, Warning, TEXT("세팅 이벤트 넘 : %d"), EnviromentLevel);
-    int nAssignmentEventNum = 0;
-    for (const auto& TempEvent : arrWaitingEventList)
+    nEventGuestNum = nEventGuestNum = EnviromentLevel * 4 + 4;
+
+    SettingReservationGuest(); //예약자 이름까지 설정후
+    Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
+
+    if (Hotel_Clock) Hotel_Clock->ChangeEviromentLevel(EnviromentLevel);
+
+    if (EnviromentLevel == 0)
     {
-        if (nAssignmentEventNum < nEventGuestNum)   //
+        UE_LOG(LogTemp,Warning,TEXT("테스트용 세팅"));
+        arrWaitingEventList[0]->isNormalGuestEvent = true;
+        arrWaitingEventList[0]->FunctionInfo = arrEventFuntionList[2];
+
+        arrWaitingEventList[1]->isNormalGuestEvent = true;
+        arrWaitingEventList[1]->FunctionInfo = arrEventFuntionList[5];
+
+        arrWaitingEventList[2]->isNormalGuestEvent = true;
+        arrWaitingEventList[2]->FunctionInfo = arrEventFuntionList[3];
+
+        arrWaitingEventList[3]->isNormalGuestEvent = true;
+
+        arrWaitingEventList[4]->isNormalGuestEvent = true;
+        arrWaitingEventList[4]->FunctionInfo = arrEventFuntionList[4];
+
+
+        arrWaitingEventList[5]->isNormalGuestEvent = true;
+        arrWaitingEventList[5]->FunctionInfo = arrEventFuntionList[0];
+
+        arrWaitingEventList[6]->isNormalGuestEvent = true;
+
+
+        arrWaitingEventList[7]->isNormalGuestEvent = true;
+        arrWaitingEventList[7]->FunctionInfo = arrEventFuntionList[1];
+
+        arrWaitingEventList[8]->isNormalGuestEvent = true;
+        arrWaitingEventList[8]->FunctionInfo = arrEventFuntionList[6];
+
+    }
+    else
+    {
+        // UE_LOG(LogTemp, Warning, TEXT("세팅 이벤트 넘 : %d"), EnviromentLevel);
+        int nAssignmentEventNum = 0;
+        for (const auto& TempEvent : arrWaitingEventList)
         {
-            nAssignmentEventNum++;
-            TempEvent->isNormalGuestEvent = false;
-            int randNum = FMath::RandRange(0, nRandRange);
-            TempEvent->FunctionInfo = arrEventFuntionList[randNum];
-            if (TempEvent->FunctionInfo.isEventOnlyOnce) //게임내 1번만 할당해야될 함수라면
+            if (nAssignmentEventNum < nEventGuestNum)   //
             {
-                arrEventFuntionList.Swap(randNum, nRandRange); //현재 랜덤 뽑는 범위의 제일뒤에 함수와 스왑
-                nRandRange--;//랜덤 값 범위를 1개 줄여 스왑 함수를 랜덤 배치에서 제외
+                nAssignmentEventNum++;
+                TempEvent->isNormalGuestEvent = false;
+                int randNum = FMath::RandRange(0, nRandRange);
+                TempEvent->FunctionInfo = arrEventFuntionList[randNum];
+                if (TempEvent->FunctionInfo.isEventOnlyOnce) //게임내 1번만 할당해야될 함수라면
+                {
+                    arrEventFuntionList.Swap(randNum, nRandRange); //현재 랜덤 뽑는 범위의 제일뒤에 함수와 스왑
+                    nRandRange--;//랜덤 값 범위를 1개 줄여 스왑 함수를 랜덤 배치에서 제외
+                }
+            }
+            else
+            {
+                //UE_LOG(LogTemp, Warning, TEXT("세팅 이벤트 노말 게스트"));
+                TempEvent->isNormalGuestEvent = true; //일반 손님
             }
         }
-        else
-        {
-            //UE_LOG(LogTemp, Warning, TEXT("세팅 이벤트 노말 게스트"));
-            TempEvent->isNormalGuestEvent = true; //일반 손님
-        }
+        SettingReservationGuest(); //예약자 이름까지 설정후
+        Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
+
     }
+
 
     for (int i = 0; i < arrWaitingEventList.Num(); ++i)
     {
         CheckExecuteFunctionTiming(FET_Assignment, arrWaitingEventList[i]->EventGuest);
     }
-
-    SettingReservationGuest(); //예약자 이름까지 설정후
-    Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
     Hotel_Clock->StartGameClock();
-
     Hotel_CCTV->arrCameras[0]->SetCameraState(true);
 }
 
 void UHotel_Manager::TryCalling(AHotel_Phone* CalledPhone, FName NowCallingPhoneNum)
 {
     //CalledPhone 전화를 건 전화기 , NowCallingPhoneNum 전화기가 현재 걸고있는 전화번호
+    if (IsGameEndPhase) return;
     FString tempTriggerStr = "WalkerTryCall_" + CalledPhone->RegistPhoneNumber.ToString() + "_To_" + NowCallingPhoneNum.ToString();
     OnEventTriggerAction(FName(tempTriggerStr));
-
     if (NowCallingPhoneNum == "205" || NowCallingPhoneNum == "305" || CalledPhone->RegistPhoneNumber == "205" || CalledPhone->RegistPhoneNumber == "305") //205/305호의 전화기로 전화를 걸거나 205/305호의 번호를 거는건 실패
     {
-        if(NowCallingPhoneNum == "205" && CalledPhone->RegistPhoneNumber == "205") return //205호 이벤트를 위해 벽열기 조건 완료시 신호를 연결중 신호로 변경
+        if (NowCallingPhoneNum == "205" && CalledPhone->RegistPhoneNumber == "205") return; //205호 이벤트를 위해 벽열기 조건 완료시 신호를 연결중 신호로 변경
         CalledPhone->ConnectFail();
-        return;
+        return ;
     }
     else if (NowCallingPhoneNum == "911") //보안팀한테 전화걸기
     {
-        Department_Operator->AddDialogueDataState("경고", EDialogueState::DS_Security);
+        Department_Operator->AddDialogueDataState("보안팀", EDialogueState::DS_Security);
         Department_Operator->SetGuestDialogueDataLast(true);
     }
-
     if (mapRegistedPhone.Contains(NowCallingPhoneNum))
     {
         AHotel_Phone* CallingPhone = *mapRegistedPhone.Find(NowCallingPhoneNum);
-        if (IsValid(CallingPhone) && !IsValid(CallingPhone->aConnectedPhone) && CalledPhone != CallingPhone)
+        if (IsValid(CallingPhone) && !IsValid(CallingPhone->aConnectedPhone) && CalledPhone != CallingPhone && !CallingPhone->isUserPickUpPhone)
         {
             CallingPhone->ConnectTry(CalledPhone);
             CalledPhone->ConnectTry(CallingPhone);
@@ -388,7 +425,12 @@ void UHotel_Manager::TryCalling(AHotel_Phone* CalledPhone, FName NowCallingPhone
 }
 
 void UHotel_Manager::MinusHRScore(int MinusScore, FString Reason)
-{ 
+{
+    if (IsGameEndPhase)
+    {
+        return;
+    }
+
     nHumanResourcesScore -= MinusScore;
     FHRRecord tempRecord;
     tempRecord.Minus = true;
@@ -398,14 +440,10 @@ void UHotel_Manager::MinusHRScore(int MinusScore, FString Reason)
     if (nHumanResourcesScore < 0)
     {
         nHumanResourcesScore = 0; //점수가 마이너스가 되진 않도록
-        return;
-    }
-
-
-    UE_LOG(LogTemp, Warning, TEXT("%s"), *Reason);
-    if (IsGameEndPhase)
-    {
-        return;
+        GetWorld()->GetTimerManager().SetTimer(GameEndTimer, [this]()
+            {
+                SetGameEnd(GER_Fired);
+            }, 10.0f, false);
     }
 
     if (WalkerNowLocation == "Counter")
@@ -436,6 +474,7 @@ void UHotel_Manager::CheckManagerCallingForHR()
 void UHotel_Manager::PlusHRScore(int plusScore, FString Reason)
 {
     nHumanResourcesScore += plusScore;
+    if (nHumanResourcesScore > 100) nHumanResourcesScore = 100;
     FHRRecord tempRecord;
     tempRecord.Minus = false;
     tempRecord.Reason = Reason;
@@ -502,7 +541,11 @@ void UHotel_Manager::UpdateWalkerLocation(FName LocationName)
             {
                 if (IsValid((*Tempmap)->RoomGuest)) //해당방에 게스트가 있을경우
                 {
-                    (*Tempmap)->RoomGuest->SetLookingPlayer(true); //게스트는 들어온 플레이어를 쳐다 본다
+                    AAI_Hotel_Guest_Default* TempAI = Cast<AAI_Hotel_Guest_Default>((*Tempmap)->RoomGuest->GetController());
+                    if (!TempAI->IsMovingToTarget())
+                    {
+                        (*Tempmap)->RoomGuest->SetLookingPlayer(true); //게스트는 들어온 플레이어를 쳐다 본다
+                    }
                 }
             }
         }
@@ -557,6 +600,7 @@ void UHotel_Manager::CheckOutGuestRoom(FName RoomNum)
     {
         if (Tempmap->IsValid())
         {
+            Tempmap->Get()->Room->CheckOutProcess();
             CheckExecuteFunctionTiming(FET_CheckOut, (*Tempmap)->RoomGuest);
             KeyTray->ReturnRoomKey(RoomNum);
             (*Tempmap)->RoomGuest = NULL;
@@ -629,18 +673,16 @@ void UHotel_Manager::ExcuteEventFail()
 }
 
 void UHotel_Manager::AddNextExecutiongEventList()
-{
+{                       
+    UE_LOG(LogTemp,Warning,TEXT("넥스트 이벤트 익스 큐팅 : %d"), nNowExcutingEvent);
+    if (nNowExcutingEvent > arrWaitingEventList.Num()) return;
     FEventInfo* temp = arrWaitingEventList[nNowExcutingEvent].Get();
 
     if (temp)
     {
         if (!temp->isNormalGuestEvent)
         {
-            if (!temp->FunctionInfo.isExcutingOnlyEvent)
-            {
-                arrExecutingEventList.Add(temp);
-            }
-
+            arrExecutingEventList.Add(temp);
             CheckExecuteFunctionTiming(FET_Init, temp->EventGuest);
             if (WalkerNowLocation == "Counter")
             {
@@ -660,16 +702,21 @@ void UHotel_Manager::AddNextExecutiongEventList()
 
 void UHotel_Manager::CheckExecuteFunctionTiming(EFunctionExcuteTiming nowTiming, AHotel_Guest* TargetGuest)
 {
-    for (auto& temp : arrExecutingEventList)
+    for (int i = arrExecutingEventList.Num() - 1; i >= 0; --i)  //삭제로 인덱스 변경 위험 뒤로부터
     {
-        if (temp->isAreadyExcute) continue; //이미 실행된 이벤트면 넘기고
-        if (temp->EventGuest != TargetGuest) continue; //대상 게스트가 이벤트의 게스트가 아니면 넘기고
-        if (temp->FunctionInfo.ExecuteTiming == nowTiming)
+        if (arrExecutingEventList[i]->isAreadyExcute) continue; //이미 실행된 이벤트면 넘기고
+        if (arrExecutingEventList[i]->EventGuest != TargetGuest) continue; //대상 게스트가 이벤트의 게스트가 아니면 넘기고
+        if (arrExecutingEventList[i]->FunctionInfo.ExecuteTiming == nowTiming)
         {
-            temp->FunctionInfo.ExecuteFunction(temp);
+            arrExecutingEventList[i]->FunctionInfo.ExecuteFunction(arrExecutingEventList[i]);
+            if (arrExecutingEventList[i]->FunctionInfo.isExcutingOnlyEvent)
+            {
+                arrExecutingEventList.RemoveAt(i); //진행중 이벤트 목록에서 제거
+            }
             break;//실행했으면 브레이크
         }
     }
+
 }
 
 void UHotel_Manager::ActivateGuest(AHotel_Guest* guest, bool goToCounter) //활성화 시키고 카운터로 보낸다
@@ -703,6 +750,12 @@ void UHotel_Manager::ActivateGuest(AHotel_Guest* guest, bool goToCounter) //활�
         {
             if (!IsValid(temp.Value->RoomGuest))
             {
+                if (nNowExcutingEvent == 0) AddOutbreakEventList(guest, FName("MakeDirtyRoom"));
+                if (nNowExcutingEvent == 3) AddOutbreakEventList(guest, FName("RequestRejectCheckIn"));
+                if (nNowExcutingEvent == 6) AddOutbreakEventList(guest, FName("Impostor_Request_Reject_CheckIn"));
+                if (nNowExcutingEvent == 7) AddOutbreakEventList(guest, FName("Allocate_RoomGuest"));
+
+                 /*
                 int rand = FMath::RandRange(1, 100);
                 if (rand < 10)
                 {
@@ -712,9 +765,9 @@ void UHotel_Manager::ActivateGuest(AHotel_Guest* guest, bool goToCounter) //활�
                 {
                     if (!arrReservationGuest.Find(guest->GuestName))
                     {
-                        AddOutbreakEventList(guest, FName("RequestRejectCheckIn"));
+                        //AddOutbreakEventList(guest, FName("RequestRejectCheckIn"));
                     }
-                }
+                }*/
                     break;
             }
         }
@@ -724,18 +777,20 @@ void UHotel_Manager::ActivateGuest(AHotel_Guest* guest, bool goToCounter) //활�
 bool UHotel_Manager::OnEventTriggerAction(FName triggerName)
 {
     bool isTriggeredThisAction = false;
+    int TriggerNum = 0;
     if (arrExecutingEventList.Num() > 0)
     {
         for (int i = arrExecutingEventList.Num() - 1; i >= 0; --i)//반복문 진행중 클리어되서 삭제되는 이벤트가 있으므로 역순으로 돌아 인덱스 문제 없애기
         {
             if (arrExecutingEventList[i])
             {
+                TriggerNum = arrExecutingEventList[i]->CollectedTriggers.Num(); //이번 트리거가 추가된건지 확인하기 위해 트리거 작동전 저장
                 bool CheckClear = arrExecutingEventList[i]->FunctionInfo.CheckClearFunction(arrExecutingEventList[i], triggerName);
                 if (!arrExecutingEventList[i]->CollectedTriggers.IsEmpty())
                 {
-                    if (arrExecutingEventList[i]->CollectedTriggers.Last() == triggerName)
+                    if (TriggerNum != arrExecutingEventList[i]->CollectedTriggers.Num() && arrExecutingEventList[i]->CollectedTriggers.Last() == triggerName)
                     {
-                        isTriggeredThisAction = true; //트리거 콜렉션 체크해서 마지막이 현재 트리거이름이라면 방금 행동으로 트리거 추가된것.
+                        isTriggeredThisAction = true; //트리거 콜렉션 갯수가 바뀌었고, 라스트 트리거가 현재 트리거이름이라면 방금 행동으로 트리거 추가된것으로 판정.
                     }
                 }
                 if (CheckClear)
@@ -766,7 +821,6 @@ void UHotel_Manager::CheckExcuteBasicRule(FName TriggerName)
                 temp.Value->RoomGuest->SetGuestDialogueDataLast(false);
                 temp.Value->RoomGuest->OpenConversationUI();
                 temp.Value->RoomGuest->SetLookingPlayer(true);
-                MinusHRScore(10, TEXT("객실 무단 침입 시도"));
             }
 
             tempRoomTrigger = "Walker_Enter_" + temp.Value->Room->RoomNumber.ToString();
@@ -785,24 +839,30 @@ void UHotel_Manager::CheckExcuteBasicRule(FName TriggerName)
 }
 void UHotel_Manager::AddOutbreakEventList(AHotel_Guest * guest , FName eventName)
 {
-    TSharedPtr<FEventInfo> tempSharedPtr = MakeShared<FEventInfo>();
-    arrOutbreakEventList.Add(tempSharedPtr);
+    UE_LOG(LogTemp, Warning, TEXT("아웃 브레이크 이벤트 : %s"), *eventName.ToString());
 
-    FEventInfo* temp = tempSharedPtr.Get();
-    temp->EventGuest = guest;
-    arrWaitingEventList.Add(tempSharedPtr);
-    temp->FunctionInfo = *mapOutbreakEventFuntion.Find(eventName);
-    temp->isNormalGuestEvent = false;
-
-    if (!temp->FunctionInfo.isExcutingOnlyEvent) arrExecutingEventList.Add(temp);
-    if (!arrExecutingEventList.IsEmpty())
+    if (mapOutbreakEventFuntion.Contains(eventName))
     {
-        CheckExecuteFunctionTiming(FET_Init, arrExecutingEventList.Last()->EventGuest);
-        if (WalkerNowLocation == "Counter")
+        FExcuteFunctionInfo FoundEvent = *mapOutbreakEventFuntion.Find(eventName);
+        TSharedPtr<FEventInfo> tempSharedPtr = MakeShared<FEventInfo>();
+        arrOutbreakEventList.Add(tempSharedPtr);
+        FEventInfo* temp = tempSharedPtr.Get();
+        temp->EventGuest = guest;
+        temp->FunctionInfo = FoundEvent;
+        temp->isNormalGuestEvent = false;
+        arrExecutingEventList.Add(temp);
+
+        if (!arrExecutingEventList.IsEmpty())
         {
-            CheckExecuteFunctionTiming(FET_WalkerEnterCounter, arrExecutingEventList.Last()->EventGuest);
+            CheckExecuteFunctionTiming(FET_Init, guest);
+            if (WalkerNowLocation == "Counter")
+            {
+                CheckExecuteFunctionTiming(FET_WalkerEnterCounter, guest);
+            }
         }
     }
+
+
 }
 
 void UHotel_Manager::RemoveExecutingEvent(FEventInfo* TartgetEvent)
@@ -817,6 +877,8 @@ void UHotel_Manager::RemoveExecutingEvent(FEventInfo* TartgetEvent)
 
 void UHotel_Manager::Execute_Event_Open205(FEventInfo* eventInfo)
 {
+
+    UE_LOG(LogTemp, Warning, TEXT("205호 등장"));
     eventInfo->isAreadyExcute = true;
     UHotel_StaticMesh* tempMesh = *mapHotelMesh.Find("205Wall");
 
@@ -830,7 +892,7 @@ void UHotel_Manager::Execute_Event_Open205(FEventInfo* eventInfo)
         if (TUniquePtr<FRoomInfo>* Tempmap = mapRegistedRoom.Find("205"))
         {
             ActivateGuest(eventInfo->EventGuest, false);
-            GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, this, &UHotel_Manager::Fail_Event_Open205, 300);
+            GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, this, &UHotel_Manager::Fail_Event_Open205, 40);
             (*Tempmap)->Room->HangingNeck(eventInfo->EventGuest);
             (*Tempmap)->Room->SetRoomFlickingLight(2);
             (*Tempmap)->Room->SetActorHiddenInGame(false);
@@ -914,6 +976,7 @@ void UHotel_Manager::Fail_Event_Open205()
 
 void UHotel_Manager::Execute_Event_StarePeopleUnderLight(FEventInfo* eventInfo)
 {
+    UE_LOG(LogTemp, Warning, TEXT("가로등 밑에서 쳐다봄"));
     eventInfo->isAreadyExcute = true;
     ActivateGuest(eventInfo->EventGuest, false);
     eventInfo->EventGuest->IsWierdStareUnderLight = true; 
@@ -949,13 +1012,15 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
             eventInfo->CollectedTriggers.Add(TriggerName);
         }
 
-        GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, this, &UHotel_Manager::LookingTiemOver_StarePeopleUnderLight, FMath::RandRange(10, 30));
+        GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, this, &UHotel_Manager::LookingTiemOver_StarePeopleUnderLight, FMath::RandRange(10, 12));
     }
-    else if (TriggerName == "NoLookAtGuest")
+    else if (TriggerName == "NoLookAtGuest" || TriggerName == "1F_Switch_Off")
     {
-        if (eventInfo->CollectedTriggers.Last() == "SecurityReport_0")
+        if (eventInfo->CollectedTriggers.Num() != 0 && eventInfo->CollectedTriggers.Last() == "SecurityReport_0")
         {
             eventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0),false,false);//호텔 밖
+            eventInfo->EventGuest->DeactivateGuest();
+            UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
             return true;
         }
 
@@ -979,8 +1044,15 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
                 StreetLight->SetFlickeringOnce();
             }
             break;
-        
+
             case 6:
+            {
+                eventInfo->EventGuest->TeleportTo(FVector(-1080, 1680, 96), FRotator(0.0f, 0.0f, 0.0f)); // 문앞
+                StreetLight->SetFlickeringOnce();
+            }
+            break;
+        
+            case 8:
             {
                 if (WalkerNowLocation == "Counter")
                 {
@@ -992,7 +1064,7 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
                 }
             }
             break;
-            case 8:
+            case 10:
             {
                 UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
                 if (NavSys && eventInfo->EventGuest->Controller && eventInfo->EventGuest->Controller->GetPawn())
@@ -1003,8 +1075,7 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
 
                     for (int32 i = 0; i < NavPath->PathPoints.Num(); ++i)
                     {
-                        DrawDebugSphere(GetWorld(), NavPath->PathPoints[i], 20.0f, 8, FColor::Green, false, 5.0f);
-
+                        //DrawDebugSphere(GetWorld(), NavPath->PathPoints[i], 20.0f, 8, FColor::Green, false, 5.0f);
                         if (i > 0)
                         {
                             DrawDebugLine(GetWorld(), NavPath->PathPoints[i - 1], NavPath->PathPoints[i], FColor::Blue, false, 5.0f);
@@ -1023,7 +1094,7 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
                 }
             }
             break;
-            case 10:
+            case 12:
             {
                 eventInfo->EventGuest->CatchingPlayer();
                 UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
@@ -1044,6 +1115,7 @@ bool UHotel_Manager::CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInf
 
 void UHotel_Manager::Execute_Event_Invader(FEventInfo* eventInfo)
 {
+    UE_LOG(LogTemp, Warning, TEXT("인베이더 출몰"));
     eventInfo->isAreadyExcute = true;
     ActivateGuest(eventInfo->EventGuest, false);
     eventInfo->EventGuest->IsReadyToNeckShaking = true;
@@ -1064,40 +1136,36 @@ bool UHotel_Manager::CheckClear_Event_Invader(FEventInfo* eventInfo, FName Trigg
         if (TriggerName == "SecurityReport_0")//침입자 침입후 보안팀 카운터 호출시
         {
             eventInfo->EventGuest->TeleportTo(FVector(0, 1343, 94), FRotator(0, 0, 0), false, false);//호텔 밖
+            eventInfo->EventGuest->DeactivateGuest();
             eventInfo->CollectedTriggers.Add(TriggerName);
-            UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
             return true;
         }
         else if (WalkerNowLocation == "StaffRoom" || TriggerName == "StaffDoor_Open") //스태프룸에 들어가있다면
         {
             eventInfo->EventGuest->CatchingPlayer();
-            UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
         }
     }
     else if(TriggerName == "StaffDoor_Lock")
     {
         if (!eventInfo->CollectedTriggers.IsEmpty() && eventInfo->CollectedTriggers.Last() == "InvadeInvader") return false; //이미 침입자가 활성화 되었다면 아무것도 하지않는다
-        UE_LOG(LogTemp, Warning, TEXT("침입 타이머 OFF"));
         GetWorld()->GetTimerManager().ClearTimer(eventInfo->EventTimer);
         eventInfo->CollectedTriggers.Add(TriggerName);
     }
     else if (TriggerName == "StaffDoor_Unlock" )
     {
         if (!eventInfo->CollectedTriggers.IsEmpty() && (eventInfo->CollectedTriggers.Last() == "InvadeInvader" || eventInfo->CollectedTriggers.Last() == "StaffDoor_Unlock")) return false; //이미 침입자가 활성화 되었다면 아무것도 하지않는다
-        UE_LOG(LogTemp, Warning, TEXT("침입 타이머 ON"));
         GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, this, &UHotel_Manager::UnlockTiemOver_Invader, FMath::RandRange(10, 15));
         eventInfo->CollectedTriggers.Add(TriggerName);
     }
     else if (TriggerName == "InvadeInvader")
     {
+        UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
         eventInfo->CollectedTriggers.Add(TriggerName);
-        UE_LOG(LogTemp, Warning, TEXT("침입자 등장"));
-
         if (WalkerNowLocation == "Counter")
         {
             StaffDoor->SetOpenDoor(false);
             eventInfo->EventGuest->ReadyToRotate(); // 컨트롤러의 회전을 따름
-            bool bCanTeleport = eventInfo->EventGuest->TeleportTo(FVector(-1222, 2549, 96), FRotator(0.0f, 180.0f, 0.0f), false, true);
+            bool bCanTeleport = eventInfo->EventGuest->TeleportTo(FVector(-1222, 2579, 96), FRotator(0.0f, 180.0f, 0.0f), false, true);
         }
         else
         {
@@ -1108,19 +1176,67 @@ bool UHotel_Manager::CheckClear_Event_Invader(FEventInfo* eventInfo, FName Trigg
     return false;
 }
 
+
+void UHotel_Manager::Execute_Only_Imposter_Request_Reject_Check(FEventInfo* eventInfo)
+{
+    GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, [this, eventInfo]()
+        {
+            Department_Operator->AddDialogueDataState("요청", EDialogueState::DS_Impostor_Request_Reject_CheckIn);
+            Department_Operator->SetGuestDialogueDataLast(true);
+            Department_Operator->aPhone->TryCalling("0");
+        }, FMath::RandRange(2, 8), false);
+}
 void UHotel_Manager::Execute_Only_MakeDirtyRoom(FEventInfo* eventInfo)
 {
     for (auto& temp : mapRegistedRoom)
     {
         if (!IsValid(temp.Value->RoomGuest))
         {
-            temp.Value->Room->MakeRoomDirty(true);
-            temp.Value->Room->aDoor->SetLockDoor(false);
-            temp.Value->Room->aDoor->SetOpenDoor(true);
-            return;
+            if (temp.Value->Room->RoomNumber != "205" && temp.Value->Room->RoomNumber != "305")
+            {
+                UE_LOG(LogTemp, Warning, TEXT("%s"), *temp.Value->Room->RoomNumber.ToString());
+                temp.Value->Room->MakeRoomDirty(3);
+                temp.Value->Room->aDoor->SetLockDoor(false);
+                temp.Value->Room->aDoor->SetOpenDoor(true);
+                return;
+            }
         }
     }
 }
+
+void UHotel_Manager::ExecuteEvent_Guest_InvisibleCamera(FEventInfo* eventInfo)
+{
+    eventInfo->isAreadyExcute = true;
+    ActivateGuest(eventInfo->EventGuest, true);
+    eventInfo->EventGuest->IsWierdFaceLook = true;
+    eventInfo->EventGuest->IsCheckTrigger = true;
+    UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
+    Hotel_CCTV->SetHiddenObject(eventInfo->EventGuest);
+}
+bool UHotel_Manager::CheckClear_Guest_InvisibleCamera(FEventInfo* eventInfo, FName triggerName)
+{
+    if (!eventInfo->EventGuest->GetAIController()->AssignedGuestRoom) return false; //입실이 안됐다면
+    AHotel_Guest_Room* GuestRoom = eventInfo->EventGuest->GetAIController()->AssignedGuestRoom;
+    FString RoomNumber = GuestRoom->RoomNumber.ToString();
+
+    FString temp = FName(eventInfo->EventGuest->GuestName + "_In_" + RoomNumber).ToString();
+    temp = FName(FName(RoomNumber + "Door_OutPeepingEnd")).ToString();
+
+    if (FName(eventInfo->EventGuest->GuestName + "_In_" + RoomNumber) == triggerName)
+    {
+        GuestRoom->aDoor->SetPeepingFace(true,false);
+    }
+
+    if (FName(RoomNumber+"Door_OutPeepingEnd") == triggerName)
+    {
+        GuestRoom->aDoor->SetLockDoor(false);
+        GuestRoom->aDoor->SetOpenDoor(true);
+        eventInfo->EventGuest->CatchingPlayer();
+    }
+
+    return false;
+}
+
 
 void UHotel_Manager::ExecuteEvent_Guest_LostSignalCCTV(FEventInfo* eventInfo)
 {
@@ -1129,6 +1245,8 @@ void UHotel_Manager::ExecuteEvent_Guest_LostSignalCCTV(FEventInfo* eventInfo)
     ActivateGuest(eventInfo->EventGuest, true);
     eventInfo->EventGuest->IsWierdFaceLook = true;
     eventInfo->EventGuest->IsCheckTrigger = true;
+    UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
+
 }
 
 bool UHotel_Manager::CheckClear_Guest_LostSignalCCTV(FEventInfo* eventInfo, FName triggerName)
@@ -1138,21 +1256,14 @@ bool UHotel_Manager::CheckClear_Guest_LostSignalCCTV(FEventInfo* eventInfo, FNam
     TriggerString.ParseIntoArray(Result, TEXT("_"),true);
 
     if (eventInfo->EventGuest->GuestName != Result[0]) return false; //다른 손님의 트리거면 리턴
-    if (Result[1] == "OutHotel") //호텔 퇴실시 로비카메라 끄기
-    {
-        Hotel_CCTV->SetPostProcessCamera(0, 3, true);
-
-    }
     if (Result[1] == "In")
     {
-        UE_LOG(LogTemp, Warning, TEXT("로스트 시그널 게스트 %s"), *triggerName.ToString());
         int CameraNum = Hotel_CCTV->FindCameraNumByName(FName(Result[2]));
         if (CameraNum == -1) return false;    //장소가 cctv에 없는 장소면
         Hotel_CCTV->SetPostProcessCamera(CameraNum, 3, true);
     }
     else if (Result[1] == "Out")
     {
-        UE_LOG(LogTemp, Warning, TEXT("로스트 시그널 게스트 %s"), *triggerName.ToString());
         int CameraNum = Hotel_CCTV->FindCameraNumByName(FName(Result[2]));
         if (CameraNum == -1) return false;    //장소가 cctv에 없는 장소면
         Hotel_CCTV->SetPostProcessCamera(CameraNum, 3, false);
@@ -1172,7 +1283,6 @@ bool UHotel_Manager::CheckClear_Guest_RoomCCTV(FEventInfo* eventInfo, FName trig
     if (!eventInfo->EventGuest->GetAIController()->AssignedGuestRoom) return false; //입실이 안됐다면
     AHotel_Guest_Room* GuestRoom = eventInfo->EventGuest->GetAIController()->AssignedGuestRoom;
     FString RoomNumber = GuestRoom->RoomNumber.ToString();
-    UE_LOG(LogTemp, Warning, TEXT("트리거 %s"), *triggerName.ToString());
     if (FName(eventInfo->EventGuest->GuestName + "_In_" + RoomNumber) == triggerName)
     {
         GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, [this, eventInfo]() {
@@ -1221,7 +1331,6 @@ bool UHotel_Manager::CheckClear_Guest_RoomCCTV(FEventInfo* eventInfo, FName trig
             }
             else
             {
-                UE_LOG(LogTemp, Warning, TEXT("타이먹 죽여"));
                 GetWorld()->GetTimerManager().ClearTimer(eventInfo->EventTimer);
             }
         }
@@ -1280,7 +1389,12 @@ void UHotel_Manager::Execute_Event_Complain_RoomDirty(FEventInfo* eventInfo)
     eventInfo->EventGuest->AddDialogueDataState(TEXT("방 청소 상태에 관하여"), EDialogueState::DS_Guest_ComplainRoomCondition, 0); //대화 상태값 설정
     eventInfo->EventGuest->SetGuestDialogueDataLast(false);
     eventInfo->EventGuest->IsCalledWalker = true; // 이미 전화로 전달 된거 확인
-    eventInfo->EventGuest->GetAIController()->AssignedGuestRoom->aPhone->TryCalling("0"); //전화 걸기
+
+    GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, [eventInfo]()
+        {
+            eventInfo->EventGuest->GetAIController()->AssignedGuestRoom->aPhone->TryCalling("0"); //전화 걸기
+        }, 2.0f, false);
+
 
 }
 
@@ -1359,13 +1473,17 @@ void UHotel_Manager::Execute_Event_Allocate_Room(FEventInfo* eventInfo)
 bool UHotel_Manager::CheckClear_Allocate_Room(FEventInfo* eventInfo, FName triggerName)
 {
     FString TriggerString = triggerName.ToString();
+    TArray<FString> ResultTrigger;
+    TriggerString.ParseIntoArray(ResultTrigger, TEXT("_"), true);
+
     TArray<FString> Result;
-    TriggerString.ParseIntoArray(Result, TEXT("_"), true);
-    UE_LOG(LogTemp, Warning, TEXT("체크 얼로케이트 룸 %s") , *triggerName.ToString());
-    if (Result[0] != eventInfo->EventGuest->GuestName) return false;
-    if (Result[1] == "CheckIn")
+    FString tempString = eventInfo->CollectedTriggers.Last().ToString();
+    tempString.ParseIntoArray(Result, TEXT("_"));
+
+    if (ResultTrigger[0] != eventInfo->EventGuest->GuestName) return false;
+    if (ResultTrigger[1] == "CheckIn")
     {
-        if (Result[2] == eventInfo->CollectedTriggers.Last())
+        if (ResultTrigger[2] == Result[1])
         {
             return true;
         }
@@ -1421,18 +1539,23 @@ void UHotel_Manager::ExecuteEvent_Guest_Hanging(FEventInfo* eventInfo)
 bool UHotel_Manager::CheckClear_Guest_Hanging(FEventInfo* eventInfo, FName triggerName)
 {
     if (!eventInfo->EventGuest->GetAIController()->AssignedGuestRoom) return false;
-    if (FName(eventInfo->EventGuest->GuestName + "_CheckIn") == triggerName)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("행잉 게스트 1"));
-        eventInfo->CollectedTriggers.Add(triggerName);
-    }
+
     if (FName(eventInfo->EventGuest->GuestName + "_OutHotel") == triggerName)
     {
         return true;// 어떤 이유로든 호텔 퇴실 시 클리어
     }
+    if (eventInfo->CollectedTriggers.Num() == 0)
+    {
+        FString TriggerString = triggerName.ToString();
+        TArray<FString> Result;
+        TriggerString.ParseIntoArray(Result, TEXT("_"), true);
 
+        if (Result[0] != eventInfo->EventGuest->GuestName) return false;
+        if (Result[1] == "CheckIn")
+        eventInfo->CollectedTriggers.Add(triggerName);
+        return false; //체크인이 선행이 되야 객실 입장 체크
+    }
 
-    if (eventInfo->CollectedTriggers.Num() == 0) return false; //체크인이 선행이 되야 객실 입장 체크
     FString RoomNumber = eventInfo->EventGuest->GetAIController()->AssignedGuestRoom->RoomNumber.ToString();
 
     if (eventInfo->EventGuest->IsWierdHanging)
@@ -1442,6 +1565,7 @@ bool UHotel_Manager::CheckClear_Guest_Hanging(FEventInfo* eventInfo, FName trigg
             eventInfo->EventGuest->SetActorHiddenInGame(true);
             eventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0));
             eventInfo->EventGuest->CheckOutGuest();
+            eventInfo->CollectedTriggers.Add(triggerName);
             UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
             return true;
         }
@@ -1450,6 +1574,7 @@ bool UHotel_Manager::CheckClear_Guest_Hanging(FEventInfo* eventInfo, FName trigg
     {
         if (FName(eventInfo->EventGuest->GuestName + "_HangingNeck") == triggerName)
         {
+            UpdateDefualtLevelMenual(eventInfo->FunctionInfo.EventID);
             return true;
         }
     }
@@ -1457,14 +1582,14 @@ bool UHotel_Manager::CheckClear_Guest_Hanging(FEventInfo* eventInfo, FName trigg
     FName CheckTriggerName = FName(eventInfo->EventGuest->GuestName + "_In_" + RoomNumber);
     if (CheckTriggerName == triggerName)
     {
-        int RandTime = FMath::RandRange(1,10);
         GetWorld()->GetTimerManager().SetTimer(eventInfo->EventTimer, [eventInfo]()
             {
                 eventInfo->EventGuest->GetAIController()->AssignedGuestRoom->SetRoomFlickingLight(1);
                 eventInfo->EventGuest->GetAIController()->AssignedGuestRoom->HangingNeck(eventInfo->EventGuest);
                 eventInfo->EventGuest->GetAIController()->StopAITimer();
-                eventInfo->EventGuest->GetAIController()->StopPatientTimer();
-            }, 3.0f, false);
+                eventInfo->EventGuest->GetAIController()->StopPatienceTimer();
+                UE_LOG(LogTemp, Warning, TEXT("행잉"));
+            }, FMath::RandRange(10, 20), false);
     }
     return false;
 }
@@ -1506,6 +1631,7 @@ void UHotel_Manager::SaveGameLevelOption()
     // 실제 디스크 저장                 
     if (HotelSaveGameOption && IsValid(HotelSaveGameOption))
     {
+        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 세이브 완"));
         UGameplayStatics::SaveGameToSlot(HotelSaveGameOption, TEXT("PlayerSaveSlot"), 0);
     }
     else
@@ -1520,14 +1646,14 @@ void UHotel_Manager::LoadGameLevelOption()
     {
         HotelSaveGameOption = Cast<UHotelSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("PlayerSaveSlot"), 0));
 
-        UE_LOG(LogTemp, Warning, TEXT("로드 완료"));
+        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 로드 완료"));
         MenualLevel = HotelSaveGameOption->MenualLevel;
         EnviromentLevel = HotelSaveGameOption->EnviromentLevel;
         arrExperiencedEventID = HotelSaveGameOption->arrExperiencedEventID;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("로드 실패"));
+        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 로드 실패"));
         HotelSaveGameOption = Cast<UHotelSaveGame>(UGameplayStatics::CreateSaveGameObject(UHotelSaveGame::StaticClass()));
         MenualLevel = 1;
         EnviromentLevel = 1;
@@ -1543,7 +1669,7 @@ bool UHotel_Manager::LoadGameManualExternal()
     FString FileData;
     if (FFileHelper::LoadFileToString(FileData, *FullPath))
     {
-        UE_LOG(LogTemp, Log, TEXT("불러온 텍스트:\n%s"), *FileData);
+//        UE_LOG(LogTemp, Log, TEXT("불러온 텍스트:\n%s"), *FileData);
         FioneerMenualText = FileData;
     }
     else
@@ -1602,11 +1728,7 @@ bool UHotel_Manager::SaveGameManualExternal()
     FString SaveDir = FPaths::ProjectSavedDir(); // Saved/ 경로
     FString FullPath = SaveDir / MenualSaveName;       // ex) Saved/ManualNote.txt
 
-    UE_LOG(LogTemp, Warning, TEXT("세이브 경로 %s"), *FullPath);
-
     FString OutputText= FioneerMenualText;
-    UE_LOG(LogTemp, Warning, TEXT("세이브 텍스트 %s"), *FioneerMenualText);
-
     FFileHelper::SaveStringToFile(OutputText, *FullPath);
 
     /* //Json 세이브 언젠가 쓰일지도
@@ -1646,15 +1768,17 @@ void UHotel_Manager::InitMenualInfo()
 void UHotel_Manager::UpdateDefualtLevelMenual(int EventId)
 {
     if (MenualLevel != 1) return;
-    if(EventId > 0 &&!arrExperiencedEventID.Find(EventId))
+    if(EventId > 0 && !arrExperiencedEventID.Contains(EventId))
     {
         arrExperiencedEventID.Add(EventId);
         arrExperiencedEventID.Sort();
     }
+    SaveGameLevelOption();
 }
 
 void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
 {
+    if (IsGameEndPhase) return;
     IsGameEndPhase = true;
     OnEventTriggerAction("GameEnd");//해결못하고 엔드할시 패널티 적용
 
@@ -1669,7 +1793,7 @@ void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
     }
 
     EndReason = Reason;
-    FTimerHandle EndGameTimer;
+    GetWorld()->GetTimerManager().ClearTimer(GameEndTimer);
 
     if (Hotel_Walker)
     {
@@ -1680,15 +1804,28 @@ void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
         Hotel_Walker->HideUIName("Phone");
         Hotel_Walker->SetActorTickEnabled(false);
     }
+    for (auto& temp : arrEventGuestController)
+    {
+        if (IsValid(temp->Hotel_Guest))
+        {
+            temp->Hotel_Guest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0));
+            temp->Hotel_Guest->DeactivateGuest();
+        }
+        temp->StopAITimer();
+        temp->StopPatienceTimer();
+    }
 
     if (Level_Manager)
     {
-        Level_Manager->LoadEndingLevel();
-    }
-    for (auto& temp : arrEventGuestController)
-    {
-        temp->StopAITimer();
-        temp->StopPatientTimer();
+        if (Reason == GER_Fired)
+        {
+            Hotel_Clock->StopGameClock();
+            Level_Manager->PlayFireSequence();
+        }
+        else
+        {
+            Level_Manager->LoadEndingLevel();
+        }
     }
 
 }
@@ -1722,6 +1859,7 @@ void UHotel_Manager::SettingInitGame(bool isContinue)
 
     IsManagerWarningWalker = false;
     IsManagerFireWalker = false;
+
 
     CodeWord = FMath::RandRange(0, 9);
     LoadGuestName();
@@ -1759,15 +1897,4 @@ FString UHotel_Manager::GetReservationGuestName()
 void UHotel_Manager::RingingBell()
 {
     Level_Manager->RingingBell();
-}
-
-
-void UHotel_Manager::StartWalkerFireProcess()
-{
-    for (auto& temp : mapHotelSwitch)
-    {
-        temp.Value->EventLightAction("HardFlicking");
-    }
-    Department_Operator->TeleportTo((Hotel_Walker->FollowCamera->GetComponentLocation() + (Hotel_Walker->FollowCamera->GetForwardVector() * -50)), FRotator(0.0f, 0.0f, 0.0f), false, true); // 캐릭터 카메라 뒤로 50 거리에
-    Department_Operator->CatchingPlayer();
 }

@@ -6,6 +6,7 @@
 #include "Interactable_Object.h"
 #include "Hotel_Walker.h"
 #include "Components/Button.h"
+#include "Components/VerticalBox.h"
 
 
 void UInteractive_Box::NativeConstruct()

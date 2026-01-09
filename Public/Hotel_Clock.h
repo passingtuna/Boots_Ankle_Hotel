@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Hotel_Object.h"
-#include "Components/TextBlock.h"
 #include "Hotel_Clock.generated.h"
 
 /**
  * 
  */
 class UHotel_Manager;
+class UTextBlock;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Clock : public AHotel_Object
 {
@@ -45,6 +45,8 @@ public:
 
     void SetStopTime(bool on) { bIsStopTime = on; };
     void StartGameClock();
+    void StopGameClock();
+    void ChangeEviromentLevel(int Level) { nEnviromentalLevle = Level; };
     UTextBlock* Text;
     virtual void SetHighLightInteractive(bool OnOff) override;
 };

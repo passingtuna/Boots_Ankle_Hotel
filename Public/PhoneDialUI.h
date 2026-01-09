@@ -4,11 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Image.h"
 #include "PhoneDialUI.generated.h"
 
 class AHotel_Phone;
-
+class UImage;
 /**
  * 
  */
@@ -46,7 +45,8 @@ public:
     UImage* DialImage;
     void CalRotateImage(int nNum);
 
-    void ReturnDial() { RotationAngle = 0; };
+    UFUNCTION()
+    void ReturnDial();
     float RotationAngle = 0;
 
 };

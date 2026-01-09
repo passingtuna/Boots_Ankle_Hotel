@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Button.h"
-#include "Components/VerticalBox.h"
-#include "Interactable_Object.h"
 #include "Interactive_Box.generated.h"
 
 class AHotel_Walker;
+class IInteractable_Object;
+class UButton;
+class AHotel_Walker;
+class UVerticalBox;
+
 /**
  * 
  */

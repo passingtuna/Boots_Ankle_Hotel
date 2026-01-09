@@ -12,6 +12,16 @@
 #include "AI_Hotel_Guest_Default.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Interactable_Object.h"
+#include "DialogueDataAsset.h"
+#include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "GuestAnimInstance.h"
+#include "GuestFaceAnimInstance.h"
+#include "Hotel_CCTV_Camera.h"
+#include "Hotel_Manager.h"
+#include "Camera/CameraComponent.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AHotel_Guest::AHotel_Guest()
@@ -78,7 +88,7 @@ void AHotel_Guest::BeginPlay()
     CapsuleComponent = FindComponentByClass<UCapsuleComponent>();
     IsHanging = false;
     IsReadyToNeckShaking = false;
-    GetCharacterMovement()->MaxWalkSpeed = 3000;
+    GetCharacterMovement()->MaxWalkSpeed = 200;
 }
 
 
@@ -233,11 +243,11 @@ void AHotel_Guest::ExecuteQuickAction()
 
 void AHotel_Guest::PlaySound(FName SoundKey)
 {
-    if (USoundBase* sb_Sound = *SoundEffectMap.Find(SoundKey))
+    if (USoundBase** sb_Sound = SoundEffectMap.Find(SoundKey))
     {
-        if (AudioComp->GetSound() != sb_Sound)
+        if (AudioComp->GetSound() != *sb_Sound)
         {
-            AudioComp->SetSound(sb_Sound);
+            AudioComp->SetSound(*sb_Sound);
             AudioComp->Play();
         }
     }
@@ -319,6 +329,19 @@ void AHotel_Guest::OpenConversationUI()
         DialogueName = "Guest_Default";
     }
     break;
+    
+    case EDialogueState::DS_Guest_Apologize:
+    {
+        DialogueName = "Guest_Apologize_Accept";
+    }
+    break;
+
+    case EDialogueState::DS_Guest_Complete_RoomClean:
+    {
+        DialogueName = "Guest_Complete_RoomClean";
+    }
+    break;
+    
 
     default:
         DialogueName = "";
@@ -456,7 +479,6 @@ void AHotel_Guest::SetLookingCameraStatue(int state, AHotel_CCTV_Camera * camera
         camera->SetNoiseOnceCamera(0.2f);
     }
 
-    UE_LOG(LogTemp,Warning,TEXT("카메라 스테이트 %d"), state);
     switch (state)
     {
     case 1:
@@ -530,6 +552,7 @@ void AHotel_Guest::SetLookingCameraStatue(int state, AHotel_CCTV_Camera * camera
         if (IsValid(FaceAnimInstance))
         {
             FaceAnimInstance->IsLaughing = true;
+            PlaySound("Laugh");
         }
     }
     break;
@@ -555,15 +578,26 @@ void AHotel_Guest::CorpseRetrieval()
 {
     SetActorHiddenInGame(true);
     TeleportTo(FVector(-327, 839, 94),FRotator(0,0,0));
+    DeactivateGuest();
     Hotel_Manager->WalkerCorpseRetrieval();
     CheckOutGuest();
+}
+
+
+void AHotel_Guest::DeactivateGuest()
+{
+    SetActorHiddenInGame(true);
+    SetActorTickEnabled(false);
+    SetActorEnableCollision(false);
+    GetCharacterMovement()->GravityScale = 0.0f;//일단 중력을 끄고 액티브할때 켜중;
 }
 
 void AHotel_Guest::CheckOutGuest()
 {
     if (!CheckInRoomNum.IsNone())
-    {
+    {  
         Hotel_Manager->CheckOutGuestRoom(CheckInRoomNum);
+        CheckInRoomNum = NAME_None;
     }
 }
 
@@ -575,9 +609,8 @@ void AHotel_Guest::SetLookingPlayer(bool state)
 
 void AHotel_Guest::GuestExit()
 {
-    if (IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(GuestName + "_OutHotel"));
-    CheckOutGuest();//체크인된 방이 있다면 체크아웃
-    Hotel_Manager->GuestOutHotel(this); //실행중 이벤트에서 빼고
+    AIController->StopPatienceTimer();
+    AIController->StopAITimer();
     AIController->GoToOutside(); //밖으로 이동
 }
 void AHotel_Guest::SetNeckShakingState(bool state)
@@ -702,5 +735,6 @@ void AHotel_Guest::CatchingPlayer()
 
 void AHotel_Guest::CallingFailAction()
 {
+    if (IsHanging || CheckInRoomNum == NAME_None) return;
     AIController->CallingFail();
 }

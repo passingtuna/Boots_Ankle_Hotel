@@ -3,6 +3,16 @@
 
 #include "Hotel_Guest_Room.h"
 #include "Hotel_Manager.h"
+#include "Hotel_Phone.h"
+#include "Hotel_Door.h"
+#include "Hotel_Toilet_Door.h"
+#include "Hotel_Toilet.h"
+#include "Hotel_Bed.h"
+#include "Hotel_Guest.h"
+#include "Hotel_Light.h"
+#include "Hotel_Switch.h"
+#include "Hotel_Place.h"
+#include "Hotel_CCTV_Camera.h"
 
 // Sets default values
 AHotel_Guest_Room::AHotel_Guest_Room()
@@ -18,12 +28,12 @@ void AHotel_Guest_Room::BeginPlay()
     Super::BeginPlay();
     //UE_LOG(LogTemp,Warning,TEXT("비긴 플레이 %s"), *RoomNumber.ToString()); 
     GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->AddRegistedRoom(RoomNumber, this);
-    MakeRoomDirty(FMath::RandRange(0, 3));
+   
+    //MakeRoomDirty(FMath::randRange(0,3));
     if (RoomNumber == "205" || RoomNumber == "305")
     {
         this->SetActorHiddenInGame(true);
     }
-    InitChildActorComponent();
 }
 
 void AHotel_Guest_Room::InitChildActorComponent()
@@ -37,7 +47,8 @@ void AHotel_Guest_Room::InitChildActorComponent()
     if (IsValid(aToiletSwitch))
     {
         aToiletSwitch->AddConnectedLight(aToiletLight);
-        aMainSwitch->SetSwitchName(RoomNumber);
+        FString ToiletName = RoomNumber.ToString() + "Toilet";
+        aMainSwitch->SetSwitchName(FName(*ToiletName));
     }
     if (IsValid(aDoor))
     {
@@ -56,7 +67,7 @@ void AHotel_Guest_Room::InitChildActorComponent()
 
     if (IsValid(aToilet_Volume))
     {
-        FString ToiletName = RoomNumber.ToString() + "_Toilet";
+        FString ToiletName = RoomNumber.ToString() + "Toilet";
         aToilet_Volume->PlaceName = FName(*ToiletName);
         aToilet_Volume->AddRegistPlace();
         aToilet_Volume->ParentPlace = aPlace_Volume;
@@ -82,7 +93,7 @@ void AHotel_Guest_Room::InitChildActorComponent()
         aToilet->SetRoomNumber(RoomNumber);
     }
 }
-// Called every frame
+
 void AHotel_Guest_Room::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -119,7 +130,6 @@ bool AHotel_Guest_Room::CheckRoomDirty()
 void AHotel_Guest_Room::HangingNeck(AHotel_Guest* HangedMan)
 {
 
-    UE_LOG(LogTemp, Warning, TEXT("행잉 넥"));
     if (IsValid(RopeStaticComponent))
     {
         RopeStaticComponent->SetVisibility(true);
@@ -135,8 +145,6 @@ void AHotel_Guest_Room::HangingNeck(AHotel_Guest* HangedMan)
     FVector worldPos = RopeStaticComponent->GetComponentTransform().TransformPosition(relativeOffset);
     HangedMan->TeleportTo(worldPos, RopeStaticComponent->GetComponentRotation());
 
-    UE_LOG(LogTemp, Warning, TEXT("행잉 넥 %f : %f : %f") , worldPos.X, worldPos.Y, worldPos.Z);
-    HangedMan->TeleportTo(worldPos, RopeStaticComponent->GetComponentRotation());
 }
 
 void AHotel_Guest_Room::CheckOutProcess()
@@ -145,6 +153,7 @@ void AHotel_Guest_Room::CheckOutProcess()
     {
         RopeStaticComponent->SetVisibility(false);
     }
+    aPhone->InitPhoneWatchGuest();
     MakeRoomDirty(FMath::RandRange(0, 3));
 }
 

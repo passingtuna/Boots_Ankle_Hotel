@@ -14,11 +14,20 @@
 #include "Hotel_Door.h"
 #include "Hotel_Manager.h"
 #include "Hotel_Object.h"
+#include "Hotel_Guest.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/TextBlock.h"
 #include "Components/SphereComponent.h"
 #include "Level_Manager.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Interactable_Object.h"
+#include "Camera/CameraComponent.h"
+#include "Components/AudioComponent.h"
+#include "PhoneDialUI.h"
+#include "MenualUI.h"
+#include "DialogueUI.h"
+#include "Hotel_Menual.h"
+#include "DialogueDataAsset.h"
 
 // Called when the game starts or when spawned
 
@@ -88,6 +97,13 @@ void AHotel_Walker::BeginPlay()
             DialogueUi->AddToViewport();
             DialogueUi->SetVisibility(ESlateVisibility::Hidden);
         }
+    }
+
+
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+    if (Subsystem)
+    {
+        Subsystem->AddMappingContext(DefaultIMC, 0);
     }
 
     Hotel_Manager = GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>();
@@ -229,11 +245,6 @@ void AHotel_Walker::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
     PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
-		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
-		if (Subsystem)
-		{
-			Subsystem->AddMappingContext(DeafualtIMC, 0);
-		}
 		UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 		if (EnhancedInputComponent)
 		{
@@ -558,4 +569,41 @@ void AHotel_Walker::HideActorFromCamera(AActor* targetActor)
 void AHotel_Walker::ShowActorFromCamera(AActor* targetActor)
 {
     CaptureComp->HiddenActors.Remove(targetActor);
+}
+
+void AHotel_Walker::HangingNeck(FTransform RopeTrans)
+{
+
+    isCatchNeck = true;
+    if (!bUseControllerRotationYaw)
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = false; // 이동 방향으로 자동 회전 X
+        bUseControllerRotationYaw = false;
+    }
+
+    if (GetCharacterMovement()) //중력 끄기
+    {
+        GetCharacterMovement()->GravityScale = 0.0f;
+        GetCharacterMovement()->Velocity.Z = 0.0f;
+    }
+
+    UCapsuleComponent* temp = GetComponentByClass<UCapsuleComponent>();
+    temp->SetCollisionProfileName("NoCollision");
+    FVector relativeOffset(0, -5, -80);
+    FVector worldPos = RopeTrans.TransformPosition(relativeOffset);
+    FRotator EditedRot = RopeTrans.Rotator();
+    EditedRot.Pitch -= 20;
+    SetActorRotation(FRotator(0, EditedRot.Yaw, 0)); // 피치와 롤은 무시하고 Yaw만 사용 (수평 회전만)
+    PlayerController->SetControlRotation(EditedRot);
+    TeleportTo(worldPos, RopeTrans.Rotator());
+
+
+    FTimerHandle EndGameTimer;
+    GetWorld()->GetTimerManager().SetTimer(EndGameTimer, [this]()
+        {
+            Hotel_Manager->MinusHRScore(100, TEXT("근무중 실종"));
+            Hotel_Manager->SetGameEnd(EGameEndReason::GER_Dead);
+        }
+    , 3.0f, false);
+
 }

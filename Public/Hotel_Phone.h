@@ -4,11 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Hotel_Object.h"
-#include "Hotel_Guest.h"
 #include "Hotel_Phone.generated.h"
 
 class UPhoneDialUI;
-
+class AHotel_Guest;
 /**
  * 
  */
@@ -42,6 +41,7 @@ public:
 
     UFUNCTION()
     void ConnectTry(AHotel_Phone* ConnectingPhone);
+    void Disconnect();
 
     UFUNCTION()
     void ConnectSuccess();
@@ -49,6 +49,8 @@ public:
     void PickReceiver();
     void RingingTimeOver();
     FName GetRegistPhoneNumber() {return RegistPhoneNumber;};
+
+    void InitPhoneWatchGuest();
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Sound)
     AHotel_Guest* PhoneWatchGuest;

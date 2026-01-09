@@ -3,6 +3,7 @@
 
 #include "Hotel_Switch.h"
 #include "Hotel_Manager.h"
+#include "Hotel_Light.h"
 
 void AHotel_Switch::BeginPlay()
 {
@@ -31,6 +32,9 @@ void  AHotel_Switch::SetSwitchToggle()
 
     comSwitchButton->SetRelativeRotation(FRotator(0, 0, (180 * isSwitchOn)));
 
+    FString temp = SwitchName.ToString() + "_Switch_" + (isSwitchOn ? "On" : "Off");
+
+    Hotel_Manager->OnEventTriggerAction("");
     for (const auto& targetLight : arrConnectedLight)
     {
         targetLight->SetSwitchAction(isSwitchOn);// TurnLight(isSwitchOn);

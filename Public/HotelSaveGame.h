@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
-#include "Hotel_Manager.h"
 #include "HotelSaveGame.generated.h"
 
 /**
@@ -23,5 +22,6 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Options")
     int EnviromentLevel;
 
+    UPROPERTY(VisibleAnywhere, Category = "Options")
     TArray<int> arrExperiencedEventID;
 };

@@ -4,17 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Hotel_Phone.h"
-#include "Hotel_Door.h"
-#include "Hotel_Toilet_Door.h"
-#include "Hotel_Toilet.h"
-#include "Hotel_Bed.h"
-#include "Hotel_Manager.h"
-#include "Hotel_Light.h"
-#include "Hotel_Switch.h"
-#include "Hotel_Place.h"
-#include "Hotel_CCTV_Camera.h"
 #include "Hotel_Guest_Room.generated.h"
+
+class AHotel_Bed;
+class AHotel_Toilet;
+class AHotel_Switch;
+class AHotel_Toilet_Door;
+class AHotel_CCTV_Camera;
+class AHotel_Light;
+class AHotel_Phone;
+class AHotel_Place;
+class AHotel_Door;
+class AHotel_Guest;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Guest_Room : public AActor

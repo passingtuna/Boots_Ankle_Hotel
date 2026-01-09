@@ -8,7 +8,6 @@ void UHotel_StaticMesh::BeginPlay()
 {
    Super::BeginPlay();
    GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->AddHotelMesh(MeshName,this);
-   UE_LOG(LogTemp, Warning, TEXT("%s 벽로드 오류"), *MeshName.ToString());
 }
 void UHotel_StaticMesh::SetMeshState(bool state)
 {

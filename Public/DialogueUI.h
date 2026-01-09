@@ -4,12 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Hotel_Types.h"
 #include "Components/Button.h"
-#include "Components/VerticalBox.h"
-#include "Components/TextBlock.h"
-#include "DialogueDataAsset.h"
-#include "Hotel_Guest.h"
-#include "Hotel_Phone.h"
 #include "DialogueUI.generated.h"
 
 /**
@@ -18,6 +14,15 @@
 class AHotel_Walker;
 class UHotel_Manager;
 class UDialogueChoiceButton;
+class AHotel_Guest;
+class AAI_Hotel_Guest_Default;
+class AHotel_Phone;
+class AHotel_Phone;
+class UTextBlock;
+class UVerticalBox;
+class UButton;
+class UDialogueDataAsset;
+
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UDialogueUI : public UUserWidget
 {
@@ -55,7 +60,6 @@ public:
     void SetDialogueGuest(AHotel_Guest* GuestInfo, AHotel_Phone* Phone);
     void ViewDialogue();
     void ViewSelectionDialogue();
-
     virtual void NativeConstruct() override;
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
     UPROPERTY(meta = (BindWidget))
@@ -75,7 +79,6 @@ public:
     void SetFunctionParameter(int parameter) { NowFunctionParameter = parameter; };
     void RejectFullRooms();
     void CheckIn();
-    void SetAnswerTimer(float Time , TFunction<void()> function);
     void UpdateGuestName();
     void SetNextDialogueIndex(int index);
 
@@ -91,6 +94,9 @@ public:
     void SetDialogueIndex();
     void MinusHRResource();
     void FireWalker();
+    void DecereasePatience();
+    void CheckRoomCondition();
+    void ApologizeAccept();
 };
 
 
@@ -105,12 +111,11 @@ public:
     UPROPERTY(meta = (BindWidget))
     UTextBlock* TextBlock;
 
-    int NextDialogueIndex;
+    int NextDialogueId;
     int FunctionParameter;
     TFunction<void()> StoredAction;
     UDialogueUI* DialogueWidget;
-
-
+    
     virtual void NativeConstruct() override
     {
         Super::NativeConstruct();
@@ -133,7 +138,7 @@ public:
         }
         if (DialogueWidget)
         {
-            DialogueWidget->SetNowIndex(NextDialogueIndex);
+            DialogueWidget->SetNowIndex(NextDialogueId);
         }
     }
 };

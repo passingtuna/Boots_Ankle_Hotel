@@ -7,6 +7,7 @@
 #include "Hotel_Manager.h"
 #include "Hotel_Walker.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AHotel_Object::AHotel_Object()

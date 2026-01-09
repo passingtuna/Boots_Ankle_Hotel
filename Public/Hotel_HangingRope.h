@@ -16,4 +16,5 @@ class BOOTS_ANKLE_HOTEL_API AHotel_HangingRope : public AHotel_Object
     virtual void BeginPlay() override;
 
     void UseRope();
+    UStaticMeshComponent* RopeMesh;
 };

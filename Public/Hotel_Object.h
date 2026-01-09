@@ -5,12 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Interactable_Object.h"
-#include "Components/AudioComponent.h"
 #include "Hotel_Object.generated.h"
 
 class AHotel_Walker;
 class UHotel_Manager;
-
+class UAudioComponent;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Object : public AActor , public IInteractable_Object
 {

@@ -4,13 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Camera/CameraComponent.h"
-#include "Components/AudioComponent.h"
-#include "PhoneDialUI.h"
-#include "MenualUI.h"
-#include "DialogueUI.h"
-#include "Hotel_Menual.h"
-#include "DialogueDataAsset.h"
 #include "Hotel_Walker.generated.h"
 
 class USpringArmComponent;
@@ -22,14 +15,21 @@ class UInteractive_Box;
 class IInteractable_Object;
 struct FInputActionValue;
 class UHotel_Manager;
+class UPhoneDialUI;
+class UMenualUI;
+class UDialogueUI;
+class AAI_Hotel_Guest_Default;
+class AHotel_Phone;
+class AHotel_Guest;
 
 UCLASS(Blueprintable)
 class BOOTS_ANKLE_HOTEL_API AHotel_Walker : public ACharacter
 {
 	GENERATED_BODY()
 
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnhancedInput, meta = (AllowPrivateAccess = "true"))
-	UInputMappingContext* DeafualtIMC;
+	UInputMappingContext* DefaultIMC;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnhancedInput, meta = (AllowPrivateAccess = "true"))
 	UInputAction* IA_Move;
@@ -136,7 +136,7 @@ public:
     void EnterHotel();
     void HideActorFromCamera(AActor * targetActor);
     void ShowActorFromCamera(AActor* targetActor);
-
+    void HangingNeck(FTransform RopeTrans);
     bool IsInteractThisObject(IInteractable_Object* testObject);
 
     UPROPERTY(EditAnyWhere,BlueprintReadOnly,Category = Sound)

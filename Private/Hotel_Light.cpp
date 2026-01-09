@@ -3,6 +3,7 @@
 
 #include "Hotel_Light.h"
 #include "Hotel_Manager.h"
+#include "Components/LightComponent.h"
 
 // Sets default values
 AHotel_Light::AHotel_Light()

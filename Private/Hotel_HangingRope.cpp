@@ -2,7 +2,7 @@
 
 
 #include "Hotel_HangingRope.h"
-
+#include "Hotel_Walker.h"
 
 void AHotel_HangingRope::BeginPlay()
 {
@@ -10,9 +10,11 @@ void AHotel_HangingRope::BeginPlay()
     availableAction.Add(TEXT("사용"), [this]() { UseRope(); });
 
     Super::BeginPlay();
+    RopeMesh = GetComponentByClass<UStaticMeshComponent>();
+    
 }
 
 void AHotel_HangingRope::UseRope()
 {
-
+    Hotel_Walker->HangingNeck(RopeMesh->GetComponentTransform());
 }

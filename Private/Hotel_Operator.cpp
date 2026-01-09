@@ -4,6 +4,7 @@
 #include "Hotel_Operator.h"
 #include "Hotel_Manager.h"
 #include "Hotel_Walker.h"
+#include "Hotel_Phone.h"
 void AHotel_Operator::BeginPlay()
 {
     Super::BeginPlay();
@@ -46,6 +47,12 @@ UDialogueDataAsset* AHotel_Operator::GetDailogueData(EDialogueState DialogueStat
             DialogueName = "Manager_Ask_AllocateRoomGuest";
         }
         break;
+
+        case EDialogueState::DS_Impostor_Request_Reject_CheckIn:
+        {
+            DialogueName = "Impostor_Ask_GuestDoNotEnter";
+        }
+        break;
         default:
             DialogueName = "";
             break;
@@ -65,6 +72,6 @@ void AHotel_Operator::CallingFailAction()
 
     if (Hotel_Manager->GetWalkerFired())
     {
-        Hotel_Manager->StartWalkerFireProcess();
+         Hotel_Manager->SetGameEnd(GER_Fired);
     }
 }

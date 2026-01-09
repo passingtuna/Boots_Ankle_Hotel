@@ -4,13 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "GameFramework/Character.h"
-#include "DialogueDataAsset.h"
-#include "GuestDataAsset.h"
-#include "Hotel_Operator.h"
-#include "Hotel_CCTV.h"
-#include "Hotel_Light.h"
-#include "Hotel_StaticMesh.h"
+#include "Hotel_Types.h"
 #include "Hotel_Manager.generated.h"
 
 class AHotel_Phone;
@@ -21,74 +15,24 @@ class AHotel_Place;
 class AHotel_Clock;
 class AHotel_KeyTray;
 class AHotel_Switch;
+class AHotel_Operator;
+class AHotel_CCTV;
+class AHotel_Light;
+class AHotel_StaticMesh;
 class UConversationUI;
 class UHotelSaveGame;
 class ALevel_Manager;
+class UDialogueDataAsset;
+class UGuestDataAsset;
+class AHotel_Door;
+class UHotel_StaticMesh;
+class AAI_Hotel_Guest_Default;
 
-struct FRoomInfo
+static const TArray<FString> CodeWords =
 {
-    AHotel_Guest_Room* Room;
-    AHotel_Guest * RoomGuest;
-};
-
-struct FGuestname
-{
-    bool isMan;
-    bool isAssigned = false;
-    FString Name;
-    FString SimilarName;
-};
-enum EFunctionExcuteTiming
-{
-    FET_Assignment, FET_Init, FET_CheckIn, FET_EnterRoom, FET_CheckOut ,FET_WalkerEnterCounter
-};
-
-enum EGameEndReason
-{
-    GER_NotYet,GER_Dead,GER_Fired,GER_Clear
-};
-
-struct FExcuteFunctionInfo
-{
-    int EventID;
-    EFunctionExcuteTiming ExecuteTiming = FET_Init;
-    bool isEventOnlyOnce = false;
-    bool isExcutingOnlyEvent = false;//실행만하고 따로 트리거 체크를 하지않아 대기 리스트에 넣지 않음
-    TFunction<void(struct FEventInfo* eventInfo)> ExecuteFunction;
-    TFunction<bool(struct FEventInfo* eventInfo, FName trigger)> CheckClearFunction;
-};
-
-struct FEventInfo
-{
-    AHotel_Guest* EventGuest;
-    FTimerHandle EventTimer;
-    bool isNormalGuestEvent = true;
-    bool isAreadyExcute = false;
-    TArray<FName> CollectedTriggers;
-    FExcuteFunctionInfo FunctionInfo;
-};
-
-struct FHRRecord
-{
-    FString Reason;
-    bool Minus;
-    int Score;
-}
-;
-
-USTRUCT(BlueprintType)
-struct FManualInfo : public FTableRowBase
-{
-    GENERATED_BODY()
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 Category;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 EventID;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FText MenualText;
+    TEXT("앞코"),TEXT("뒷굽"),TEXT("부츠끈"),TEXT("혀"),
+    TEXT("목통"),TEXT("밑창"),TEXT("덧창"),TEXT("깔창"),
+    TEXT("안창"),TEXT("장식못")
 };
 
 UCLASS()
@@ -104,6 +48,9 @@ private:
     AHotel_Clock* Hotel_Clock;
     TArray <FGuestname> arrGuestName;
     TArray<AAI_Hotel_Guest_Default*> arrEventGuestController;
+    
+    TArray<AHotel_Guest*> arrHotelGuest;
+
     AHotel_KeyTray* KeyTray;
     AHotel_Walker* Hotel_Walker;
     AHotel_Operator* Department_Operator;
@@ -157,8 +104,7 @@ public:
 //------------------게임 진행-----------------------------------
 private:
     TArray <FString> arrReservationGuest;
-    FTimerHandle CallingTimer;
-    FTimerHandle EventTermTimer;
+    FTimerHandle GameEndTimer;
     FName WalkerNowLocation;
 
     int nHumanResourcesScore;
@@ -219,7 +165,6 @@ public:
     void CheckExcuteBasicRule(FName triggerName);
     void AddOutbreakEventList(AHotel_Guest* guest , FName eventName);
 
-    void StartWalkerFireProcess();
 
     //-----------------------------지역 이벤트---------------------------------------- 
     void Execute_Event_Open205(FEventInfo* eventInfo);//205호 등장
@@ -248,6 +193,7 @@ public:
     void Execute_AreaFlickingLight(FEventInfo* eventInfo); // 불 깜빡임
     bool CheckClear_AreaFlickingLight(FEventInfo* eventInfo, FName TriggerName);
     void Execute_Only_MakeDirtyRoom(FEventInfo* eventInfo);    //
+    void Execute_Only_Imposter_Request_Reject_Check(FEventInfo* eventInfo);    //
 
     //-----------------------------상황별 추가 이벤트---------------------------------------- 
 
@@ -275,19 +221,27 @@ public:
     void ExecuteEvent_Guest_RoomCCTV(FEventInfo* eventInfo);
     bool CheckClear_Guest_RoomCCTV(FEventInfo* eventInfo, FName triggerName);
 
-    void ExecuteEvent_Guest_InvisibleCamera();
+    void ExecuteEvent_Guest_InvisibleCamera(FEventInfo* eventInfo);
+    bool CheckClear_Guest_InvisibleCamera(FEventInfo* eventInfo, FName triggerName); //
 
     void ExecuteEvent_PeepingPlayer();
 
 
 //----------- 세이브 ---------------------
 private:
-    UHotelSaveGame* HotelSaveGameOption;
+    UPROPERTY()
     FString MenualSaveName;
+    UPROPERTY()
     int EnviromentLevel;
+    UPROPERTY()
     int MenualLevel;
+    UPROPERTY()
     TArray<int>arrExperiencedEventID;
+    UPROPERTY()
     TArray<FManualInfo> DefualtMenualText;
+    UPROPERTY()
+    UHotelSaveGame* HotelSaveGameOption;
+    UPROPERTY()
     FString FioneerMenualText;
 
 public:

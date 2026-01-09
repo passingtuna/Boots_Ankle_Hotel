@@ -4,9 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
-#include "Navigation/PathFollowingComponent.h"
-#include "Hotel_Manager.h"
-#include "Hotel_Place.h"
 #include "AI_Hotel_Guest_Default.generated.h"
 
 /**
@@ -14,10 +11,11 @@
  */
 class AHotel_Guest_Room;
 class AHotel_Guest;
+class UHotel_Manager;
 
 enum EArriveState
 {
-    AS_None, AS_EndMoveCounter , AS_EndMoveRoom, AS_EndHearingKnock ,AS_LockingDoor
+    AS_None, AS_EndMoveCounter , AS_EndMoveRoom, AS_EndHearingKnock ,AS_LockingDoor,AS_OutSide
 };
 
 UCLASS()
@@ -29,7 +27,7 @@ private:
     bool isComplained;
     int nPatience;
     FTimerHandle Timer_AI;
-    FTimerHandle Timer_Patient;
+    FTimerHandle Timer_Patience;
 public:
     void BeginPlay()override;
     void MoveToTargetLocation(FVector TargetLocation);
@@ -54,12 +52,12 @@ public:
     void CheckingRoomCondition();
     void HearingKnock();
     void CallingWalker();
-    void DecreasePatienceCount();
+    void DecreasePatienceCount(bool Looping = false);
     int GetPatienceCount() {return nPatience;};
     void RingingBell();
-    void StopPatientTimer();
+    void StopPatienceTimer();
     void StopAITimer();
     void CloseRoomDoor(float time);
-    void PauseMovement();
-    void ResumeMovement();
+
+    bool IsMovingToTarget();
 };

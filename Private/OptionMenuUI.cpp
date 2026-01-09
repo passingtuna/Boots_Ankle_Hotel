@@ -4,6 +4,10 @@
 #include "OptionMenuUI.h"
 #include "Hotel_Walker.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/Image.h"
+#include "Components/CanvasPanel.h" 
+#include "HotelSaveGame.h"
+#include "Hotel_Manager.h"
 
 
 void UOptionMenuUI::NativeConstruct()

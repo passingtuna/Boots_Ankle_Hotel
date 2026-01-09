@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Image.h"
-#include "Components/CanvasPanel.h"
 #include "LoadingUI.generated.h"
 
+class UImage;
+class UCanvasPanel;
 /**
  * 
  */

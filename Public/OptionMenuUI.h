@@ -4,15 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Image.h"
-#include "Components/CanvasPanel.h" 
-#include "HotelSaveGame.h"
-#include "Hotel_Manager.h"
+#include "Hotel_Types.h"
 #include "OptionMenuUI.generated.h"
 
 /**
  * 
  */
+class UImage;
+class UHotel_Manager;
+class UCanvasPanel;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UOptionMenuUI : public UUserWidget
 {

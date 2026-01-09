@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "Hotel_Guest.h"
 #include "GuestDataAsset.generated.h"
 
 /**
  * 
  */
+class AHotel_Guest;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UGuestDataAsset : public UPrimaryDataAsset
 {

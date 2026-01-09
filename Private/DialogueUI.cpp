@@ -6,6 +6,11 @@
 #include "AI_Hotel_Guest_Default.h"
 #include "Hotel_Manager.h"
 #include "Hotel_Guest_Room.h"
+#include "Components/VerticalBox.h"
+#include "Components/TextBlock.h"
+#include "DialogueDataAsset.h"
+#include "Hotel_Guest.h"
+#include "Hotel_Phone.h"
 
 void UDialogueUI::NativeConstruct()
 {
@@ -28,7 +33,7 @@ void UDialogueUI::NativeConstruct()
     tempWaitButton->Button->IsFocusable = true;
     tempWaitButton->DialogueWidget = this;
     tempWaitButton->TextBlock->SetText(FText::FromString(TEXT("잠시 기다려 주실수 있을실까요?")));
-    tempWaitButton->NextDialogueIndex = 0;
+    tempWaitButton->NextDialogueId = 0;
     tempWaitButton->SetVisibility(ESlateVisibility::Visible);
     tempWaitButton->StoredAction = [this]() { PauseDialogue(); };
     ChooseButtonContainer->AddChild(tempWaitButton);
@@ -39,7 +44,7 @@ void UDialogueUI::NativeConstruct()
     tempEndButton->Button->IsFocusable = true;
     tempEndButton->DialogueWidget = this;
     tempEndButton->TextBlock->SetText(FText::FromString(TEXT("나중에 하자")));
-    tempEndButton->NextDialogueIndex = 0;
+    tempEndButton->NextDialogueId = 0;
     tempEndButton->SetVisibility(ESlateVisibility::Collapsed);
     tempEndButton->StoredAction = [this]() { EndDialogue(); };
     ChooseButtonContainer->AddChild(tempEndButton);
@@ -56,6 +61,12 @@ void UDialogueUI::NativeConstruct()
     mapFunction.Add(TEXT("SetDialogueIndex"), [this]() { SetDialogueIndex(); });
     mapFunction.Add(TEXT("MinusHRResource"), [this]() { MinusHRResource(); });
     mapFunction.Add(TEXT("FireWalker"), [this]() { FireWalker(); });
+    mapFunction.Add(TEXT("DecereasePatience"), [this]() { DecereasePatience(); });
+    mapFunction.Add(TEXT("CheckRoomCondition"), [this]() { CheckRoomCondition(); });
+    mapFunction.Add(TEXT("ApologizeAccept"), [this]() { ApologizeAccept(); });
+
+    
+        
 
     
     Hotel_Manager = GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>();
@@ -65,7 +76,7 @@ void UDialogueUI::ViewSelectionDialogue()
     isAlreadyEnd = false;
     isPrevDisConnect = false;
     TextNameBox->SetText(FText::FromString(""));
-    FText FormatNamedLine = FText::FromString("(어떤 대화를 시작할까?)");
+    FText FormatNamedLine = FText::FromString(TEXT("(어떤 대화를 시작할까?)"));
     TextLineBox->SetText(FormatNamedLine);
     TextNameBox->SetText(FText::FromString(TEXT("근무자")));
 
@@ -80,7 +91,7 @@ void UDialogueUI::ViewSelectionDialogue()
         tempButton.FunctionName = "SetDialogueIndex";
         tempButton.Text = NowGuest->arrGuestDialogueData[i].DialogueTitle;
         tempButton.FunctionParameter = i;
-        tempButton.NextLineIndex = 0;
+        tempButton.NextLineId = 0;
         arrTitleButton.Add(tempButton);
     }
 
@@ -109,7 +120,6 @@ void UDialogueUI::ViewDialogue()
     {
         WaitButton->SetVisibility(ESlateVisibility::Collapsed);
     }
-    isPreInitDialogueIndex = false;
     EndButton->SetVisibility(ESlateVisibility::Collapsed);
     if (IsValid(OverlayPhone))//폰으로 받은 전화는 이름표시 X
     {
@@ -133,7 +143,7 @@ void UDialogueUI::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 }
 
 void UDialogueUI::SetDialogueGuest(AHotel_Guest* GuestInfo, AHotel_Phone* Phone)
-{ 
+{
     NowGuest = GuestInfo;
     OverlayPhone = NULL;
     NowGuestDialogueIndex = -1;
@@ -143,8 +153,11 @@ void UDialogueUI::SetDialogueGuest(AHotel_Guest* GuestInfo, AHotel_Phone* Phone)
     NowGuestController = Cast<AAI_Hotel_Guest_Default>(NowGuest->GetController());
     if (NowGuestController)
     {
-        NowGuestController->StopPatientTimer();
+        UE_LOG(LogTemp, Warning, TEXT("스땁 테이션트 타이머"));
+        NowGuestController->StopPatienceTimer();
     }
+
+    GetWorld()->GetTimerManager().ClearTimer(DialogueTimer);
 
     DialogueName = NowGuest->ObjectName;
     if (IsValid(Phone))
@@ -222,7 +235,7 @@ FText UDialogueUI::GetFormatNamedText(const FString& Text)
 
 void UDialogueUI::PauseDialogue()
 {
-    UE_LOG(LogTemp, Warning, TEXT("퍼즈 다이얼로그"));
+    //UE_LOG(LogTemp, Warning, TEXT("퍼즈 다이얼로그"));
     if (isPrevDisConnect)
     {
         EndDialogue();
@@ -232,7 +245,9 @@ void UDialogueUI::PauseDialogue()
     {
         NowGuest->SetGuestDialogueData(NowDialogueData, NowGuestDialogueIndex);
         NowGuest->SetDialoguePause(NowGuestDialogueIndex , NowDialogueIndex);
-        SetAnswerTimer(30, [this]() {NowGuest->GetAIController()->DecreasePatienceCount();});
+
+        UE_LOG(LogTemp, Warning, TEXT("인내심 대화 퍼즈"));
+        GetWorld()->GetTimerManager().SetTimer(DialogueTimer, [this]() {NowGuest->GetAIController()->DecreasePatienceCount(true); }, 10 , false);
     }
     Hotel_Walker->HideUIName("Dialogue");
 
@@ -254,15 +269,15 @@ void UDialogueUI::GuestWaitOvertime()
 
 void UDialogueUI::EndDialogue()
 {
-    UE_LOG(LogTemp, Warning, TEXT("엔드 다이얼로그"));
+    //UE_LOG(LogTemp, Warning, TEXT("엔드 다이얼로그"));
     NowGuest->EndGuestDialgue(NowGuestDialogueIndex);
     Hotel_Walker->HideUIName("Dialogue");
     if (isPrevDisConnect || isAlreadyEnd) return; 
     isAlreadyEnd = true;
     if (IsValid(OverlayPhone))
     {
-        OverlayPhone->aConnectedPhone->ConnectFail();
-        OverlayPhone->ConnectFail();
+        OverlayPhone->aConnectedPhone->Disconnect();
+        OverlayPhone->Disconnect();
         OverlayPhone = NULL;
     }
     else
@@ -279,7 +294,7 @@ void UDialogueUI::ActivateButton(const FDialogueChoice& ChoiceData)
         arrChoiceButton[i]->SetVisibility(ESlateVisibility::Visible);
         FText FormatNamedLine = GetFormatNamedText(ChoiceData.Text);
         arrChoiceButton[i]->TextBlock->SetText(FormatNamedLine);
-        arrChoiceButton[i]->NextDialogueIndex = ChoiceData.NextLineIndex;
+        arrChoiceButton[i]->NextDialogueId = ChoiceData.NextLineId;
         arrChoiceButton[i]->FunctionParameter = ChoiceData.FunctionParameter;
         if(mapFunction.Contains(ChoiceData.FunctionName))
         {
@@ -294,24 +309,34 @@ void UDialogueUI::DeactivateAllButton()
     {
         arrChoiceButton[i]->SetVisibility(ESlateVisibility::Collapsed);
         arrChoiceButton[i]->TextBlock->SetText(FText::FromString(TEXT("")));
-        arrChoiceButton[i]->NextDialogueIndex = 0;
+        arrChoiceButton[i]->NextDialogueId = 0;
         arrChoiceButton[i]->FunctionParameter = 0;
         arrChoiceButton[i]->StoredAction = NULL;
     }
 }
 
 
-void UDialogueUI::SetNowIndex(int Index)
+void UDialogueUI::SetNowIndex(int index)
 {
     if (isAlreadyEnd) return; //EndDialogue 함수로 이미 대화가 끝났다면
-
     if (isPreInitDialogueIndex)
     {
-        ViewDialogue();
+        isPreInitDialogueIndex = false;
+        return;
     }
-    else if (-1 < Index && Index < NowDialogueData->DialogueLines.Num())//범위 밖이면 보여주지는 않는다
+
+    bool isFindIndex = false;
+
+    for (int i = 0; i < NowDialogueData->DialogueLines.Num(); i++)
     {
-        NowDialogueIndex = Index;
+        if (NowDialogueData->DialogueLines[i].NodeID == index)
+        {
+            NowDialogueIndex = index;
+            isFindIndex = true;
+        }
+    }
+    if (isFindIndex)
+    {
         ViewDialogue();
     }
     else
@@ -332,8 +357,8 @@ void UDialogueUI::RejectFullRooms()
 {
     if (IsValid(NowGuest))
     {
-        NowGuest->GuestExit();
         if (NowGuest->IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(NowGuest->GuestName + "_Reject_CheckIn"));
+        NowGuest->GuestExit();
     }
     EndDialogue();
 }
@@ -350,10 +375,12 @@ void UDialogueUI::CheckIn()
     else //방에 이상이 있다면 현재 다이얼로그 재실행
     {
         SetNextDialogueIndex(NowDialogueIndex);
+        ViewDialogue();
         TextLineBox->SetText(FText::FromString(TEXT("장난 하시는겁니까?")));
-        if (NowGuest)
+        if (NowGuest && NowGuest->AIController)
         {
-            NowGuest->AIController->DecreasePatienceCount();
+            UE_LOG(LogTemp, Warning, TEXT("인내심 잘못된 선택지"));
+            NowGuest->AIController->DecreasePatienceCount(false);
             if (NowGuest->AIController->GetPatienceCount() < 1)
             {
                 EndDialogue();
@@ -362,11 +389,6 @@ void UDialogueUI::CheckIn()
     }
 }
 
-void UDialogueUI::SetAnswerTimer(float Time, TFunction<void()> function)
-{
-    TimerFuntion = function;
-    GetWorld()->GetTimerManager().SetTimer(DialogueTimer, this, &UDialogueUI::ExecuteTimerFunction, Time);
-}
 
 void UDialogueUI::ExecuteTimerFunction()
 {
@@ -398,7 +420,19 @@ void UDialogueUI::Reporting()
 void UDialogueUI::SetNextDialogueIndex(int index)
 {
     isPreInitDialogueIndex = true;
-    NowDialogueIndex = index;
+
+    if (!IsValid(NowDialogueData))
+    {
+        return;
+    }
+    for (int i = 0 ; i < NowDialogueData->DialogueLines.Num() ;i++)
+    {
+        if (NowDialogueData->DialogueLines[i].NodeID == index)
+        {
+            NowDialogueIndex = index;
+            return;
+        }
+    }
 }
 
 void UDialogueUI::SecurityReport()
@@ -409,11 +443,13 @@ void UDialogueUI::SecurityReport()
     {
         SetNextDialogueIndex(1);
         DisconnectCalling();
+        ViewDialogue();
     }
     else //아닐시 패널티
     {
         SetNextDialogueIndex(2);
         DisconnectCalling();
+        ViewDialogue();
         Hotel_Manager->MinusHRScore(10, TEXT("보안팀 관련 보고 부정확"));//인사 점수
     }
 }
@@ -424,8 +460,8 @@ void UDialogueUI::DisconnectCalling()
         {
             if (IsValid(OverlayPhone))
             {
-                OverlayPhone->aConnectedPhone->ConnectFail();
-                OverlayPhone->ConnectFail();
+                OverlayPhone->aConnectedPhone->Disconnect();
+                OverlayPhone->Disconnect();
                 OverlayPhone = NULL;
             }
             isPrevDisConnect = true;
@@ -441,6 +477,7 @@ void UDialogueUI::SetDialogueIndex()
         NowDialogueData = NowGuest->GetDailogueData(NowGuest->arrGuestDialogueData[NowGuestDialogueIndex].DialogueState, IsValid(OverlayPhone));
         SetNextDialogueIndex(NowGuest->arrGuestDialogueData[NowGuestDialogueIndex].DialogueIndex);
         NowGuest->SetGuestDialogueData(NowDialogueData, NowGuestDialogueIndex);
+        ViewDialogue();
     }
 }
 
@@ -449,10 +486,49 @@ void UDialogueUI::MinusHRResource()
     switch (NowFunctionParameter)
     {
     case 0: Hotel_Manager->MinusHRScore(30, TEXT("대화중 매니저 노출")); break;
+    case 1:
+        {
+            Hotel_Manager->MinusHRScore(20, TEXT("손님 조롱"));
+            if (IsValid(NowGuest))
+            {
+                NowGuest->GuestExit();
+            }
+        }break;
+    case 2:
+        Hotel_Manager->MinusHRScore(20, TEXT("손님 조롱"));
+        EndDialogue();
+        break;
     }
 }
 
 void UDialogueUI::FireWalker()
 {
-    Hotel_Manager->StartWalkerFireProcess();
+    //DisconnectCalling();
+    //EndDialogue();
+    Hotel_Manager->SetGameEnd(GER_Fired);
+}
+
+void UDialogueUI::DecereasePatience()
+{
+    if (IsValid(NowGuest))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("대화에서 인내심 차감"));
+        NowGuest->AIController->DecreasePatienceCount(false);
+    }
+}
+void UDialogueUI::CheckRoomCondition()
+{
+    if (IsValid(NowGuest))
+    {
+        if (NowGuest->AIController->AssignedGuestRoom->CheckRoomDirty()) 
+        {
+            NowGuest->EraseDialgueDataState(EDialogueState::DS_Guest_Complete_RoomClean);
+            EndDialogue();
+        }
+    }
+}
+
+void UDialogueUI::ApologizeAccept()
+{
+    NowGuest->EraseDialgueDataState(EDialogueState::DS_Guest_Apologize);
 }

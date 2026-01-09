@@ -2,6 +2,7 @@
 
 
 #include "Hotel_CCTV_Camera.h"
+#include "Components/SceneCaptureComponent2D.h"
 
 // Sets default values
 AHotel_CCTV_Camera::AHotel_CCTV_Camera()

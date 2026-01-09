@@ -5,6 +5,10 @@
 #include "Hotel_Walker.h"
 #include "Hotel_Guest.h"
 #include "Hotel_Manager.h"
+#include "Components/TextRenderComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 void AHotel_Door::BeginPlay()
 {
     Super::BeginPlay();
@@ -234,6 +238,7 @@ void AHotel_Door::Peeping()
     if (isOpen) return; //열린문은 훔쳐볼수 없음
     CheckInteractLocation();
 
+    FString temp;
     if (!isInside)
     {
         PeepingHoleOutside->SetVisibility(true,true);
@@ -241,6 +246,7 @@ void AHotel_Door::Peeping()
         PeepingCameraOutside->Activate();
         PeepingFaceMeshOutside->SetVisibility(isActivePeepingFaceOutside);
         Hotel_Walker->SetPeeping(true, this);
+        temp = DoorName.ToString() + "Door_InPeeping";
     }
     else
     {
@@ -249,7 +255,9 @@ void AHotel_Door::Peeping()
         PeepingCameraInside->Activate();
         PeepingFaceMeshInside->SetVisibility(isActivePeepingFaceInside);
         Hotel_Walker->SetPeeping(true, this);
+        temp = DoorName.ToString() + "Door_OutPeeping";
     }
+    Hotel_Manager->OnEventTriggerAction(FName(temp));
     PlaySound("Peep");
 }
 
@@ -259,6 +267,17 @@ void AHotel_Door::PeepingEnd()
     PeepingHoleOutside->SetVisibility(false, true);
     PeepingCameraInside->Deactivate();
     PeepingCameraOutside->Deactivate();
+    if (isInside)
+    {
+        FString temp = DoorName.ToString() + "Door_InPeepingEnd";
+        Hotel_Manager->OnEventTriggerAction(FName(temp));
+    }
+    else
+    {
+        FString temp = DoorName.ToString() + "Door_OutPeepingEnd";
+        Hotel_Manager->OnEventTriggerAction(FName(temp));
+        
+    }
 }
 
 void AHotel_Door::MovePeepingEye(FVector2D LookAxisVector)

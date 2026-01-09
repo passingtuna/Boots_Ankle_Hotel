@@ -8,6 +8,10 @@
 #include "Hotel_Guest.h"
 #include "Hotel_Door.h"
 #include "Hotel_Guest_Room.h"
+#include "Hotel_Manager.h"
+#include "Hotel_Place.h"
+#include "Hotel_Phone.h"
+#include "Hotel_Bed.h"
 
 void AAI_Hotel_Guest_Default::BeginPlay()
 {
@@ -36,7 +40,6 @@ void AAI_Hotel_Guest_Default::InitAIController(AHotel_Guest * guest)
 void AAI_Hotel_Guest_Default::AssigningGuestRoom(AHotel_Guest_Room* GuestRoom)
 {
 
-    UE_LOG(LogTemp, Warning, TEXT("어싸인 게스트룸"));
     if (IsValid(Hotel_Guest))
     {
         AssignedGuestRoom = GuestRoom;
@@ -72,6 +75,7 @@ void AAI_Hotel_Guest_Default::GoToRoom()
 {
     if (IsValid(Hotel_Guest))
     {
+        Hotel_Guest->SetAutoActionDoor(true);
         Hotel_Guest->ReadyToMove();
         if (IsValid(AssignedGuestRoom))
         {
@@ -94,6 +98,7 @@ void AAI_Hotel_Guest_Default::GoToStaffPlace()
 {
     if (IsValid(Hotel_Guest))
     {
+        Hotel_Guest->SetAutoActionDoor(true);
         Hotel_Guest->ReadyToMove();
         FVector TargetLocation = FVector(-971, 2650, 94);
         MoveToTargetLocation(TargetLocation);
@@ -103,7 +108,10 @@ void AAI_Hotel_Guest_Default::GoToOutside()
 {
     if (IsValid(Hotel_Guest))
     {
+        Hotel_Guest->SetAutoActionDoor(true);
         Hotel_Guest->ReadyToMove();
+
+        MoveSuccessState = AS_OutSide;
         FVector TargetLocation = FVector(-327, 839, 94);
         MoveToTargetLocation(TargetLocation);
     }
@@ -116,8 +124,7 @@ void AAI_Hotel_Guest_Default::MoveToTargetLocation(FVector TargetLocation)
 
     if (NavSys && NavSys->ProjectPointToNavigation(TargetLocation, Projected))
     {
-        TargetLocation = Projected.Location;
-        MoveToLocation(TargetLocation, 20.f);
+        MoveToLocation(Projected.Location, 20.f);
     }
 }
 void AAI_Hotel_Guest_Default::Tick(float DeltaTime)
@@ -129,7 +136,7 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
 {
     FString ResultStr;
 
-    UE_LOG(LogTemp, Warning, TEXT("온 무브 컴플릿 콜백 %d : %d") , Result, MoveSuccessState);
+    //UE_LOG(LogTemp, Warning, TEXT("온 무브 컴플릿 콜백 %d : %d") , Result, MoveSuccessState);
     switch (Result)
     {
         case EPathFollowingResult::Success:
@@ -145,14 +152,15 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                 case AS_EndMoveCounter:
                     {
                         Hotel_Guest->SetLookingPlayer(true);
-                        if (Hotel_Manager->GetWalkerLocation() == "Counter")
+                        if (Hotel_Manager->GetWalkerLocation() == "Counter") //
                         {
-                            GetWorld()->GetTimerManager().SetTimer(Timer_Patient, this, &AAI_Hotel_Guest_Default::DecreasePatienceCount, 10);
+                            UE_LOG(LogTemp, Warning, TEXT("카운터에 있는데 말을 안걸어서 일단 해버림"));
+                            GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); }, 15 , false);
                         }
                         else
                         {
                             UE_LOG(LogTemp, Warning, TEXT("셋 링잉 벨 타이머"));
-                            GetWorld()->GetTimerManager().SetTimer(Timer_AI, this, &AAI_Hotel_Guest_Default::RingingBell, 2);//10초 대기후 대기벨 울리기
+                            GetWorld()->GetTimerManager().SetTimer(Timer_AI, this, &AAI_Hotel_Guest_Default::RingingBell, 8);//10초 대기후 대기벨 울리기
                         }
                     }
                     break;
@@ -179,18 +187,58 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                             GetWorld()->GetTimerManager().SetTimer(Timer_AI, [this]() {
                                 Hotel_Guest->ReadyToMove();
                                 GoToRoom();
-                                MoveSuccessState = AS_None;
                                 }, 1.0f, false);
 
                         }
                     }
                     break;
+                case AS_OutSide:
+                    {
+                        if (Hotel_Guest->IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(Hotel_Guest->GuestName + "_OutHotel"));
+                        Hotel_Manager->GuestOutHotel(Hotel_Guest); //실행중 이벤트에서 빼고
+                        Hotel_Guest->CheckOutGuest();//체크인된 방이 있다면 체크아웃
+                        Hotel_Guest->DeactivateGuest();
+                    }
+                    break;
                 }
+                MoveSuccessState = AS_None;
             }
         break;
         case EPathFollowingResult::Blocked:
             {
                 ResultStr = TEXT("Blocked (Path interrupted or obstacle)");
+
+                GetWorld()->GetTimerManager().SetTimer(Timer_AI, [this]()
+                    {
+                        switch (MoveSuccessState)
+                        {
+                            case AS_EndMoveCounter:
+                            {
+                                GoToCounter();
+                            }
+                            break;
+                            case AS_EndMoveRoom:
+                            {
+                                GoToRoom();
+                            }
+                            break;
+                            case AS_EndHearingKnock:
+                            {
+                                GoToRoomDoor();
+                            }
+                            break;
+                            case AS_LockingDoor:
+                            {
+                                GoToRoomDoor();
+                            }
+                            break;
+                            default:
+                            {
+                            }
+                            break;
+                        }
+                    }, 2, false);
+
             }
         break;
         case EPathFollowingResult::OffPath:
@@ -238,33 +286,40 @@ void AAI_Hotel_Guest_Default::CheckingRoomCondition()
 
 void AAI_Hotel_Guest_Default::CallingFail()
 {
-    UE_LOG(LogTemp, Warning, TEXT("호텔 게스트 AI 컬링페일"));
     if (nPatience > 0 && MoveSuccessState == AS_None) //가만히 있고 인내심 바닥이 아닐경우
     {
-        GetWorld()->GetTimerManager().SetTimer(Timer_AI, this, &AAI_Hotel_Guest_Default::CallingWalker, 10);//10초 대기후 대기벨 울리기
+        DecreasePatienceCount(false);
+        GetWorld()->GetTimerManager().SetTimer(Timer_AI, this, &AAI_Hotel_Guest_Default::CallingWalker, 5);//10초 대기후 대기벨 울리기
     }
 }
 
-void AAI_Hotel_Guest_Default::DecreasePatienceCount()
+void AAI_Hotel_Guest_Default::DecreasePatienceCount(bool Looping)
 {
-    UE_LOG(LogTemp, Warning, TEXT("셋 디크리즈 페이션트 카운트"));
+    UE_LOG(LogTemp, Warning, TEXT("DecreasePatienceCount"));
+
     nPatience--;
     if (nPatience <= 0) //화나서 나갈경우
     {
-        Hotel_Manager->MinusHRScore(30, TEXT("손님 접대 불량으로 인한 환불"));
-        Hotel_Guest->GuestExit();
-        StopPatientTimer();
-        StopAITimer();
+        Hotel_Manager->MinusHRScore(30, TEXT("손님 접대 불량"));
+        if(Hotel_Guest)Hotel_Guest->GuestExit();
         return;
     }
-    GetWorld()->GetTimerManager().SetTimer(Timer_Patient, this, &AAI_Hotel_Guest_Default::DecreasePatienceCount, nPatience * nPatience * 3);
+
+    if (Looping)
+    {
+        GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() 
+            {
+                DecreasePatienceCount(true); 
+            }, 15, false);
+    }
 }
 
 void AAI_Hotel_Guest_Default::CallingWalker()
 {
-    UE_LOG(LogTemp, Warning, TEXT("호텔 게스트 AI 컬링 워커"));
-    DecreasePatienceCount();
-    AssignedGuestRoom->aPhone->TryCalling("0"); //같은 내용으로 다시 전화 걸기
+    if (nPatience > 0)
+    {
+        AssignedGuestRoom->aPhone->TryCalling("0"); //같은 내용으로 다시 전화 걸기
+    }
 }
 void AAI_Hotel_Guest_Default::CloseRoomDoor(float time)
 {
@@ -286,18 +341,30 @@ void AAI_Hotel_Guest_Default::RingingBell()
 {
     UE_LOG(LogTemp, Warning, TEXT("링잉 벨"));
     Hotel_Manager->RingingBell();
-    GetWorld()->GetTimerManager().SetTimer(Timer_Patient, this, &AAI_Hotel_Guest_Default::DecreasePatienceCount, nPatience * nPatience);
+    GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); },15, false);
 }
 
-void AAI_Hotel_Guest_Default::StopPatientTimer()
+void AAI_Hotel_Guest_Default::StopPatienceTimer()
 {
-    GetWorld()->GetTimerManager().ClearTimer(Timer_Patient);
+    GetWorld()->GetTimerManager().ClearTimer(Timer_Patience);
 }
 
 void AAI_Hotel_Guest_Default::StopAITimer()
 {
     GetWorld()->GetTimerManager().ClearTimer(Timer_AI);
 }
+
+bool AAI_Hotel_Guest_Default::IsMovingToTarget()
+{
+    EPathFollowingStatus::Type Status = GetMoveStatus();
+
+    if (Status == EPathFollowingStatus::Moving)
+    {
+        return true;
+    }
+    return false;
+}
+
 /*
 void AAI_Hotel_Guest_Default::StartMove(const FVector& TargetLocation)
 {

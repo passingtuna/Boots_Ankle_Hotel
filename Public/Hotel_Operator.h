@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Hotel_Guest.h"
-#include "Hotel_Phone.h"
 #include "Hotel_Operator.generated.h"
 
 /**
  * 
  */
+class AHotel_Phone;
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Operator : public AHotel_Guest
 {

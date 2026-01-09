@@ -4,13 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Hotel_Manager.h"
-#include "Hotel_Guest.h"
-#include "Hotel_Switch.h"
-#include "Hotel_CCTV_Camera.h"
-#include "Components/BoxComponent.h"
 #include "Hotel_Place.generated.h"
 
+class AHotel_Guest;
+class UBoxComponent;
+class AHotel_Switch;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Place : public AActor

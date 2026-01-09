@@ -5,6 +5,8 @@
 #include "PhoneDialUI.h"
 #include "Hotel_Manager.h"
 #include "Hotel_Walker.h"
+#include "Hotel_Guest.h"
+#include "Components/AudioComponent.h"
 
 void AHotel_Phone::BeginPlay()
 {
@@ -39,7 +41,6 @@ void AHotel_Phone::PickReceiver()
     {
         AudioComp->OnAudioFinished.AddDynamic(this, &AHotel_Phone::PlayToneDial);
         PlaySound("PickUp");
-        
     }
 
     if (Hotel_Walker)
@@ -66,17 +67,22 @@ void AHotel_Phone::RingingTimeOver()
 
     if (IsValid(aConnectedPhone))
     {
-        if (IsValid(aConnectedPhone->PhoneWatchGuest))
-        {
-            aConnectedPhone->PhoneWatchGuest->CallingFailAction();
-        }
-
         aConnectedPhone->ConnectFail();
     }
     ConnectFail();
     StopSound();
 }
 void AHotel_Phone::ConnectFail()
+{
+    if (IsValid(PhoneWatchGuest))
+    {
+        PhoneWatchGuest->CallingFailAction();
+    }
+    Disconnect();
+}
+
+
+void AHotel_Phone::Disconnect()
 {
     if (IsValid(Hotel_Walker) && Hotel_Walker->IsInteractThisObject(this))
     {
@@ -91,7 +97,7 @@ void AHotel_Phone::ConnectFail()
     NowCallingPhoneNum = NAME_None;
     IsDisconnect = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("커넥트 페일 : %s"), *RegistPhoneNumber.ToString());
+    UE_LOG(LogTemp, Warning, TEXT("디스 커넥트 : %s"), *RegistPhoneNumber.ToString());
     GetWorld()->GetTimerManager().ClearTimer(PhoneTimer);
 }
 
@@ -103,14 +109,14 @@ void AHotel_Phone::ConnectTry(AHotel_Phone* ConnectingPhone)
     {
         UE_LOG(LogTemp, Warning, TEXT("링잉벨 : %s"), *RegistPhoneNumber.ToString());
         PlaySound("Ring"); //벨을 울린다
-        if (!isUserPickUpPhone && IsValid(PhoneWatchGuest)) //유저가 들고 있는 폰이 아닌데 게스트가 할당된 전화기라면 게스트가 전화 받음
+        if (!isUserPickUpPhone && IsValid(PhoneWatchGuest) && !(PhoneWatchGuest->IsHanging)) //유저가 들고 있는 폰이 아닌데 게스트가 할당된 전화기라면 게스트가 전화 받음
         {
-            int TempTime = FMath::RandRange(4,10); //4~10초뒤에 전화 받기
+            int TempTime = FMath::RandRange(3,5); //4~6초뒤에 전화 받기
             GetWorld()->GetTimerManager().SetTimer(PhoneTimer, this, &AHotel_Phone::RecieveCalling, TempTime, false);
         }
-        else //그외엔 20초간 벨울리기
+        else //그외엔 10초간 벨울리기
         {
-            GetWorld()->GetTimerManager().SetTimer(PhoneTimer, this, &AHotel_Phone::RingingTimeOver, 15.0, false); //15초동안 응답 없다면 연결끊김
+            GetWorld()->GetTimerManager().SetTimer(PhoneTimer, this, &AHotel_Phone::RingingTimeOver, 7.0, false); //15초동안 응답 없다면 연결끊김
         }
     }
 }
@@ -146,7 +152,7 @@ void AHotel_Phone::EndPhoneUse()
 {
     if (aConnectedPhone)
     {
-        aConnectedPhone->ConnectFail();
+        aConnectedPhone->Disconnect();
         aConnectedPhone->aConnectedPhone = NULL;
         aConnectedPhone->GetWorld()->GetTimerManager().ClearTimer(PhoneTimer);
     }
@@ -163,3 +169,8 @@ void AHotel_Phone::EndPhoneUse()
     NowCallingPhoneNum = NAME_None;
     GetWorld()->GetTimerManager().ClearTimer(PhoneTimer);
 }
+
+void AHotel_Phone::InitPhoneWatchGuest() 
+{ 
+    PhoneWatchGuest = nullptr; 
+};

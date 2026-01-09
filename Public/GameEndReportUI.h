@@ -4,16 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/TextBlock.h"
-#include "Components/Image.h"
-#include "Components/Button.h"
-#include "Components/CanvasPanel.h"
-#include "Hotel_Manager.h"
+#include "Hotel_Types.h"
 #include "GameEndReportUI.generated.h"
 
 /**
  * 
  */
+
+class UHotel_Manager;
+class UTextBlock;
+class UButton;
+
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UGameEndReportUI : public UUserWidget
 {

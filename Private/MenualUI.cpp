@@ -7,6 +7,9 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Hotel_Walker.h"
 #include "Hotel_Menual.h"
+#include "Components/VerticalBox.h"
+#include "Components/EditableTextBox.h"
+#include "Hotel_Manager.h"
 
 void UMenualUI::NativeConstruct()
 {
@@ -16,7 +19,6 @@ void UMenualUI::NativeConstruct()
     {
         UE_LOG(LogTemp, Warning, TEXT("%s"), *tempMenualInfo.MenualText.ToString());
     }*/
-    arrExperiencedEventID = Hotel_Manager->GetExperiencedEventID();
     NowPage = 0;
 
     PreMenualLevel = Hotel_Manager->GetMenualLevel();
@@ -58,7 +60,6 @@ void UMenualUI::NativeConstruct()
 void UMenualUI::InitMenualText()
 {
     arrMenualText.Empty();
-    UE_LOG(LogTemp, Warning, TEXT("이닛 메뉴얼 텍스트"));
     if (Hotel_Manager->GetMenualLevel() == 2)
     {
         for (auto& TextLine : arrTextBox)
@@ -102,6 +103,7 @@ void UMenualUI::InitMenualText()
 
     if (Hotel_Manager->GetMenualLevel() == 1)
     {
+        arrExperiencedEventID = Hotel_Manager->GetExperiencedEventID();
         for (auto& tempEventNum : *arrExperiencedEventID)
         {
             for (auto& tempMenualInfo : *arrMenualInfo)
@@ -129,7 +131,7 @@ void UMenualUI::InitMenual(AHotel_Walker* hotel_Walker)
 {
     Hotel_Walker = hotel_Walker;
     if (!isGameStarted)
-    {
+    {   
         InitMenualText();
         //PreMenualLevel = NowMenualLevel;
     }

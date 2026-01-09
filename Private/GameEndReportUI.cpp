@@ -1,7 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "GameEndReportUI.h"
-
+#include "Components/TextBlock.h"
+#include "Components/Image.h"
+#include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Hotel_Manager.h"
 
 void UGameEndReportUI::SetHRReasonText()
 {
@@ -11,7 +15,6 @@ void UGameEndReportUI::SetHRReasonText()
     FString tempString;
     for (auto& temp : arrHRRecord) 
     {
-        UE_LOG(LogTemp, Warning, TEXT("%s "), *temp.Reason);
         tempString += temp.Reason;
         tempString += temp.Minus ? TEXT("(-") : TEXT("(+");
         tempString += FString::FromInt(temp.Score) + TEXT(")\n");

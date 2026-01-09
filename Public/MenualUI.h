@@ -4,9 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/VerticalBox.h"
-#include "Components/EditableTextBox.h"
-#include "Hotel_Manager.h"
+#include "Hotel_Types.h"
 #include "MenualUI.generated.h"
 
 /**
@@ -14,6 +12,10 @@
  */
 class AHotel_Menual;
 class AHotel_Walker;
+class UHotel_Manager;
+class ULineLimitTextBox;
+class UVerticalBox;
+class UEditableTextBox;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API UMenualUI : public UUserWidget

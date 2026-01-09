@@ -3,19 +3,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Hotel_Types.h"
 #include "Interactable_Object.h"
-#include "DialogueDataAsset.h"
-#include "Components/SphereComponent.h"
-#include "Components/CapsuleComponent.h"
-#include "GuestAnimInstance.h"
-#include "GuestFaceAnimInstance.h"
-#include "Hotel_CCTV_Camera.h"
 #include "Hotel_Guest.generated.h"
 
 class UHotel_Manager;
 class AHotel_Walker;
 class AHotel_Door;
 class AAI_Hotel_Guest_Default;
+class UDialogueDataAsset;
+class USphereComponent;
+class AHotel_CCTV_Camera;
+class UGuestAnimInstance;
+class UGuestFaceAnimInstance;
 
 
 UCLASS(Blueprintable)
@@ -107,6 +107,7 @@ public:
     void OpenConversationUI();
     void SetGuestName(FString Name) {GuestName = Name;};
     void UpdateGuestName();
+    void DeactivateGuest();
 
     void SetDialoguePause(int GuestDialogueDataIndex ,int index);
     virtual UDialogueDataAsset* GetDailogueData(EDialogueState DialogueState, bool isCall);

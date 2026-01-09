@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Hotel_Object.h"
-#include "Hotel_Light.h"
 #include "Hotel_Switch.generated.h"
 
+class AHotel_Light;
 /**
  * 
  */
