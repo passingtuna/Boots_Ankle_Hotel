@@ -36,6 +36,21 @@ static const TArray<FString> CodeWords =
 };
 
 UCLASS()
+class UEventInfo : public UObject
+{
+    GENERATED_BODY()
+public:
+    UPROPERTY()
+    TObjectPtr<AHotel_Guest> EventGuest;
+    FTimerHandle EventTimer;
+    bool isNormalGuestEvent = true;
+    bool isAreadyExcute = false;
+    TArray<FName> CollectedTriggers;
+    FExcuteFunctionInfo FunctionInfo;
+};
+
+
+UCLASS()
 class BOOTS_ANKLE_HOTEL_API UHotel_Manager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -62,11 +77,16 @@ private:
 
     bool IsGameEndPhase;
 
+    UPROPERTY()
     TMap<FName, AHotel_Phone*> mapRegistedPhone;
+    UPROPERTY()
     TMap<FName, AHotel_Place*> mapRegistedPlace;
+    UPROPERTY()
     TMap<FName, UDialogueDataAsset*> DialogueMap;
-    TMap<FName, TUniquePtr<FRoomInfo>> mapRegistedRoom;
+    TMap<FName, FRoomInfo> mapRegistedRoom;
+    UPROPERTY()
     TMap<FName, UHotel_StaticMesh*> mapHotelMesh;
+    UPROPERTY()
     TMap<FName, AHotel_Switch*> mapHotelSwitch;
 
     TArray <UGuestDataAsset*> arrBPGuestDataAsset;
@@ -148,18 +168,18 @@ public:
      int nNowExcutingEvent;
      TArray <FExcuteFunctionInfo> arrEventFuntionList;
      TMap <FName, FExcuteFunctionInfo> mapOutbreakEventFuntion;
-     TArray <TSharedPtr<FEventInfo>> arrOutbreakEventList;
+     TArray <TObjectPtr<UEventInfo>> arrOutbreakEventList;
+     TArray <TObjectPtr<UEventInfo>> arrWaitingEventList;
 
-     TArray <TSharedPtr<FEventInfo>> arrWaitingEventList;
-
-     TArray <FEventInfo*> arrExecutingEventList;
+     TArray <TObjectPtr<UEventInfo>> arrExecutingEventList;
+     bool ProcessCallException(AHotel_Phone* CalledPhone, FName NowCallingPhoneNum);
 
  public:
     void SettingEvent();
     bool OnEventTriggerAction(FName triggerName);
     void AddNextExecutiongEventList();
     void ExcuteEventFail();
-    void RemoveExecutingEvent(FEventInfo* tartgetEvent);
+    void RemoveExecutingEvent(UEventInfo* tartgetEvent);
     void CheckExecuteFunctionTiming(EFunctionExcuteTiming nowTiming, AHotel_Guest* targetGuest);
 
     void CheckExcuteBasicRule(FName triggerName);
@@ -167,8 +187,8 @@ public:
 
 
     //-----------------------------지역 이벤트---------------------------------------- 
-    void Execute_Event_Open205(FEventInfo* eventInfo);//205호 등장
-    bool CheckClear_Event_Open205(FEventInfo* eventInfo, FName triggerName);
+    void Execute_Event_Open205(UEventInfo*  eventInfo);//205호 등장
+    bool CheckClear_Event_Open205(UEventInfo*  eventInfo, FName triggerName);
     void Fail_Event_Open205();
 
     /*
@@ -180,49 +200,49 @@ public:
     */
 
     //-----------------------------외부 손님---------------------------------------- 
-    void Execute_Event_StarePeopleUnderLight(FEventInfo* eventInfo);//가로등 밑의 사람
+    void Execute_Event_StarePeopleUnderLight(UEventInfo*  eventInfo);//가로등 밑의 사람
     void LookingTiemOver_StarePeopleUnderLight();
-    bool CheckClear_Event_StarePeopleUnderLight(FEventInfo* eventInfo, FName triggerName);
+    bool CheckClear_Event_StarePeopleUnderLight(UEventInfo*  eventInfo, FName triggerName);
 
-    void Execute_Event_Invader(FEventInfo* eventInfo); //스테프 온리 문을 안잠그고 다닐시
+    void Execute_Event_Invader(UEventInfo*  eventInfo); //스테프 온리 문을 안잠그고 다닐시
     void UnlockTiemOver_Invader();
-    bool CheckClear_Event_Invader(FEventInfo* eventInfo, FName TriggerName);
+    bool CheckClear_Event_Invader(UEventInfo*  eventInfo, FName TriggerName);
 
     //-----------------------------랜덤 실행 이벤트----------------------------------------
 
-    void Execute_AreaFlickingLight(FEventInfo* eventInfo); // 불 깜빡임
-    bool CheckClear_AreaFlickingLight(FEventInfo* eventInfo, FName TriggerName);
-    void Execute_Only_MakeDirtyRoom(FEventInfo* eventInfo);    //
-    void Execute_Only_Imposter_Request_Reject_Check(FEventInfo* eventInfo);    //
+    void Execute_AreaFlickingLight(UEventInfo*  eventInfo); // 불 깜빡임
+    bool CheckClear_AreaFlickingLight(UEventInfo*  eventInfo, FName TriggerName);
+    void Execute_Only_MakeDirtyRoom(UEventInfo*  eventInfo);    //
+    void Execute_Only_Imposter_Request_Reject_Check(UEventInfo*  eventInfo);    //
 
     //-----------------------------상황별 추가 이벤트---------------------------------------- 
 
-    void Execute_Event_Complain_RoomDirty(FEventInfo* eventInfo);
-    bool CheckClear_Complain_RoomDirty(FEventInfo* eventInfo, FName triggerName);
+    void Execute_Event_Complain_RoomDirty(UEventInfo*  eventInfo);
+    bool CheckClear_Complain_RoomDirty(UEventInfo*  eventInfo, FName triggerName);
 
-    void Execute_Event_Request_Reject_CheckIn(FEventInfo* eventInfo);
-    bool CheckClear_Request_Reject_CheckIn(FEventInfo* eventInfo, FName triggerName);
+    void Execute_Event_Request_Reject_CheckIn(UEventInfo*  eventInfo);
+    bool CheckClear_Request_Reject_CheckIn(UEventInfo*  eventInfo, FName triggerName);
 
-    void Execute_Event_Allocate_Room(FEventInfo* eventInfo);
+    void Execute_Event_Allocate_Room(UEventInfo*  eventInfo);
     FString GetAllocateRoomNum();
-    bool CheckClear_Allocate_Room(FEventInfo* eventInfo, FName triggerName);
+    bool CheckClear_Allocate_Room(UEventInfo*  eventInfo, FName triggerName);
 
-    void Execute_Event_InfinityStair(FEventInfo* eventInfo);         // 무한 계단
-    bool CheckClear_Event_InfinityStair(FEventInfo* eventInfo, FName triggerName);
+    void Execute_Event_InfinityStair(UEventInfo*  eventInfo);         // 무한 계단
+    bool CheckClear_Event_InfinityStair(UEventInfo*  eventInfo, FName triggerName);
 
     //-----------------------------체크인 이벤트---------------------------------------- 
 
-    void ExecuteEvent_Guest_LostSignalCCTV(FEventInfo* eventInfo);   //입장시 cctv 끊김
-    bool CheckClear_Guest_LostSignalCCTV(FEventInfo* eventInfo, FName triggerName); //
+    void ExecuteEvent_Guest_LostSignalCCTV(UEventInfo*  eventInfo);   //입장시 cctv 끊김
+    bool CheckClear_Guest_LostSignalCCTV(UEventInfo*  eventInfo, FName triggerName); //
 
-    void ExecuteEvent_Guest_Hanging(FEventInfo* eventInfo);
-    bool CheckClear_Guest_Hanging(FEventInfo* eventInfo, FName triggerName);
+    void ExecuteEvent_Guest_Hanging(UEventInfo*  eventInfo);
+    bool CheckClear_Guest_Hanging(UEventInfo*  eventInfo, FName triggerName);
 
-    void ExecuteEvent_Guest_RoomCCTV(FEventInfo* eventInfo);
-    bool CheckClear_Guest_RoomCCTV(FEventInfo* eventInfo, FName triggerName);
+    void ExecuteEvent_Guest_RoomCCTV(UEventInfo*  eventInfo);
+    bool CheckClear_Guest_RoomCCTV(UEventInfo*  eventInfo, FName triggerName);
 
-    void ExecuteEvent_Guest_InvisibleCamera(FEventInfo* eventInfo);
-    bool CheckClear_Guest_InvisibleCamera(FEventInfo* eventInfo, FName triggerName); //
+    void ExecuteEvent_Guest_InvisibleCamera(UEventInfo*  eventInfo);
+    bool CheckClear_Guest_InvisibleCamera(UEventInfo*  eventInfo, FName triggerName); //
 
     void ExecuteEvent_PeepingPlayer();
 

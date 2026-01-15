@@ -295,7 +295,6 @@ void AAI_Hotel_Guest_Default::CallingFail()
 
 void AAI_Hotel_Guest_Default::DecreasePatienceCount(bool Looping)
 {
-    UE_LOG(LogTemp, Warning, TEXT("DecreasePatienceCount"));
 
     nPatience--;
     if (nPatience <= 0) //화나서 나갈경우
