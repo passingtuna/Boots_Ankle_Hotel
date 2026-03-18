@@ -136,7 +136,6 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
 {
     FString ResultStr;
 
-    //UE_LOG(LogTemp, Warning, TEXT("온 무브 컴플릿 콜백 %d : %d") , Result, MoveSuccessState);
     switch (Result)
     {
         case EPathFollowingResult::Success:
@@ -154,12 +153,10 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                         Hotel_Guest->SetLookingPlayer(true);
                         if (Hotel_Manager->GetWalkerLocation() == "Counter") //
                         {
-                            UE_LOG(LogTemp, Warning, TEXT("카운터에 있는데 말을 안걸어서 일단 해버림"));
                             GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); }, 15 , false);
                         }
                         else
                         {
-                            UE_LOG(LogTemp, Warning, TEXT("셋 링잉 벨 타이머"));
                             GetWorld()->GetTimerManager().SetTimer(Timer_AI, this, &AAI_Hotel_Guest_Default::RingingBell, 8);//10초 대기후 대기벨 울리기
                         }
                     }
@@ -338,7 +335,6 @@ void AAI_Hotel_Guest_Default::CloseRoomDoor(float time)
 }
 void AAI_Hotel_Guest_Default::RingingBell()
 {
-    UE_LOG(LogTemp, Warning, TEXT("링잉 벨"));
     Hotel_Manager->RingingBell();
     GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); },15, false);
 }

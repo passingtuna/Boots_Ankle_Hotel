@@ -26,7 +26,6 @@ AHotel_Guest_Room::AHotel_Guest_Room()
 void AHotel_Guest_Room::BeginPlay()
 {
     Super::BeginPlay();
-    //UE_LOG(LogTemp,Warning,TEXT("비긴 플레이 %s"), *RoomNumber.ToString()); 
     GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->AddRegistedRoom(RoomNumber, this);
    
     //MakeRoomDirty(FMath::randRange(0,3));

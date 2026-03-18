@@ -86,7 +86,6 @@ void AHotel_Phone::Disconnect()
 {
     if (IsValid(Hotel_Walker) && Hotel_Walker->IsInteractThisObject(this))
     {
-        UE_LOG(LogTemp, Warning, TEXT("디스커넥트 플레이"), *RegistPhoneNumber.ToString());
         PlaySound("Disconnect");
     }
     else
@@ -97,17 +96,14 @@ void AHotel_Phone::Disconnect()
     NowCallingPhoneNum = NAME_None;
     IsDisconnect = true;
 
-    UE_LOG(LogTemp, Warning, TEXT("디스 커넥트 : %s"), *RegistPhoneNumber.ToString());
     GetWorld()->GetTimerManager().ClearTimer(PhoneTimer);
 }
 
 void AHotel_Phone::ConnectTry(AHotel_Phone* ConnectingPhone)
 {
     aConnectedPhone = ConnectingPhone;
-    UE_LOG(LogTemp, Warning, TEXT("커넥트 트라이 : %s"), *RegistPhoneNumber.ToString());
     if (NowCallingPhoneNum.IsNone()) //전화 걸고 있는 쪽이 아니라면
     {
-        UE_LOG(LogTemp, Warning, TEXT("링잉벨 : %s"), *RegistPhoneNumber.ToString());
         PlaySound("Ring"); //벨을 울린다
         if (!isUserPickUpPhone && IsValid(PhoneWatchGuest) && !(PhoneWatchGuest->IsHanging)) //유저가 들고 있는 폰이 아닌데 게스트가 할당된 전화기라면 게스트가 전화 받음
         {

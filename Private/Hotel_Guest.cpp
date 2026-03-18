@@ -116,13 +116,21 @@ void AHotel_Guest::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-    if (IsLookingPlayer)
+    if (Hotel_Walker && IsLookingPlayer)
     {
         SetLookActor(Hotel_Walker);
     }
 
-    if (IsReadyToNeckShaking && !IsAlreadyNeckShaking)
+    if (Hotel_Walker && IsReadyToNeckShaking && !IsAlreadyNeckShaking)
     {
+        NeckShakeCheckElapsed += DeltaTime;
+        // 목 흔들기/캐치 체크는 너무 자주 할 필요가 없으므로 약간의 주기를 둔다.
+        if (NeckShakeCheckElapsed < 0.05f) // 20fps 수준으로 제한
+        {
+            return;
+        }
+        NeckShakeCheckElapsed = 0.0f;
+
         float Distance = FVector::Dist(GetActorLocation(), Hotel_Walker->GetActorLocation());
         if (Distance < 200)
         {
@@ -131,8 +139,16 @@ void AHotel_Guest::Tick(float DeltaTime)
         }
     }
 
-    if (IsWierdStareUnderLight)
+    if (Hotel_Walker && Hotel_Manager && IsWierdStareUnderLight)
     {
+        WeirdStareCheckElapsed += DeltaTime;
+        // 가로등 밑 응시 판정은 연산량이 크므로 주기를 줄인다.
+        if (WeirdStareCheckElapsed < 0.1f)
+        {
+            return;
+        }
+        WeirdStareCheckElapsed = 0.0f;
+
         FHitResult Hits;
         FCollisionQueryParams Params;
         Params.AddIgnoredActor(this);

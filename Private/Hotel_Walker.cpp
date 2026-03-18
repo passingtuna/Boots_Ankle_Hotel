@@ -162,6 +162,14 @@ void AHotel_Walker::Tick(float DeltaTime)
 
     if (FollowCamera)
     {
+        // 상호작용 라인트레이스는 너무 자주 할 필요가 없으므로 주기를 둔다.
+        InteractionTraceElapsed += DeltaTime;
+        if (InteractionTraceElapsed < 0.05f)
+        {
+            return;
+        }
+        InteractionTraceElapsed = 0.0f;
+
         FVector Start = FollowCamera->GetComponentLocation();
         FVector End = Start + FollowCamera->GetForwardVector() * 200.f;
 
