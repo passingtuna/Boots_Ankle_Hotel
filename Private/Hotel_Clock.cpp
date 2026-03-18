@@ -18,6 +18,11 @@ void AHotel_Clock::BeginPlay()
 
 void AHotel_Clock::Tick(float DeltaTime)
 {
+    if (LastDisplayedGameTime == nGameTime)
+    {
+        return;
+    }
+    LastDisplayedGameTime = nGameTime;
     int nHour = nGameTime >= 1440 ? (nGameTime - 1440) / 60 : nGameTime / 60;
     int nMinute =  nGameTime % 60;
     HourNeedleComp->SetRelativeRotation(FRotator(0 , nHour * 30 + (nMinute / 2.0f), 0));

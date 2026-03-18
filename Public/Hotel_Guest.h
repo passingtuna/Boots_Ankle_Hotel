@@ -77,6 +77,9 @@ public:
     bool IsAutoActionDoor;
     bool IsCalledWalker;
 
+    float NeckShakeCheckElapsed = 0.0f;
+    float WeirdStareCheckElapsed = 0.0f;
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound, meta = (AllowPrivateAccess = "true"))

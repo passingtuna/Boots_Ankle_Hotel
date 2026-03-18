@@ -57,6 +57,8 @@ private :
     bool isCatchNeck = false;
 
     bool isEnteringHotel = false;
+	
+    float InteractionTraceElapsed = 0.0f;
 
     FTimerHandle FootStepTimer;
     UFUNCTION()

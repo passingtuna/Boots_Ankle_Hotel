@@ -36,9 +36,22 @@
 #include "Hotel_CCTV_Camera.h"
 #include "Camera/CameraComponent.h"
 #include "MainMenuUI.h"
+#include "Hotel_PersistenceService.h"
+#include "Hotel_HRService.h"
 
 void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
 {
+    if (!PersistenceService)
+    {
+        PersistenceService = NewObject<UHotel_PersistenceService>(this);
+        PersistenceService->Init();
+    }
+    if (!HRService)
+    {
+        HRService = NewObject<UHotel_HRService>(this);
+        HRService->ResetForNewGame();
+    }
+
     TArray<FPrimaryAssetId> AssetIDs;
     UAssetManager::Get().GetPrimaryAssetIdList(FPrimaryAssetType("DialogueDataAsset"), AssetIDs);
 
@@ -63,30 +76,6 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
         {
             arrBPGuestDataAsset.Add(Asset);
         }
-    }
-
-    MenualSaveName = TEXT("HotelManual.txt");          // 파일 이름
-
-    UDataTable* Table = LoadObject<UDataTable>(nullptr, TEXT("/Game/BluePrint/Data/Table/DT_Menual"));
-    DefualtMenualText.Empty();
-    if (Table)
-    {
-        static const FString Context(TEXT("DT_Menual"));
-        TArray<FManualInfo*> TempRow;
-        Table->GetAllRows<FManualInfo>(Context, TempRow);
-        for (auto& Row : TempRow)
-        {
-            DefualtMenualText.Add(*Row);
-           // UE_LOG(LogTemp, Warning, TEXT("Menual Text : %s"), *Row->MenualText.ToString());
-        }
-    }
-
-
-    LoadGameLevelOption();
-    if (!LoadGameManualExternal())
-    {
-        //로드 실패시 초기화
-        InitMenualInfo();
     }
 
     FExcuteFunctionInfo tempEFI;
@@ -316,10 +305,11 @@ void UHotel_Manager::SettingEvent()
     int nRandRange = arrEventFuntionList.Num() - 1;
     int nEventGuestNum;
 
-    nEventGuestNum = nEventGuestNum = EnviromentLevel * 4 + 4;
-    if (Hotel_Clock) Hotel_Clock->ChangeEviromentLevel(EnviromentLevel);
+    const int EnviromentLevelLocal = GetEnviromentalLevel();
+    nEventGuestNum = nEventGuestNum = EnviromentLevelLocal * 4 + 4;
+    if (Hotel_Clock) Hotel_Clock->ChangeEviromentLevel(EnviromentLevelLocal);
 
-    if (EnviromentLevel == 0)
+    if (EnviromentLevelLocal == 0)
     {
         SettingReservationGuest(); //예약자 이름까지 설정후
         Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
@@ -348,12 +338,12 @@ void UHotel_Manager::SettingEvent()
             }
             else
             {
-                //UE_LOG(LogTemp, Warning, TEXT("세팅 이벤트 노말 게스트"));
                 TempEvent->isNormalGuestEvent = true; //일반 손님
             }
         }
         SettingReservationGuest(); //예약자 이름까지 설정후
         Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
+
     }
 
 
@@ -423,56 +413,32 @@ void UHotel_Manager::MinusHRScore(int MinusScore, FString Reason)
     {
         return;
     }
-
-    nHumanResourcesScore -= MinusScore;
-    FHRRecord tempRecord;
-    tempRecord.Minus = true;
-    tempRecord.Reason = Reason;
-    tempRecord.Score = MinusScore;
-    arrHRRocord.Add(tempRecord);
-    if (nHumanResourcesScore < 0)
+    if (HRService)
     {
-        nHumanResourcesScore = 0; //점수가 마이너스가 되진 않도록
-        GetWorld()->GetTimerManager().SetTimer(GameEndTimer, [this]()
-            {
-                SetGameEnd(GER_Fired);
-            }, 10.0f, false);
-    }
-
-    if (WalkerNowLocation == "Counter")
-    {
-        CheckManagerCallingForHR();
+        HRService->MinusScore(MinusScore, Reason, GetWorld(), Department_Operator, WalkerNowLocation);
+        if (HRService->GetScore() <= 0)
+        {
+            GetWorld()->GetTimerManager().SetTimer(GameEndTimer, [this]()
+                {
+                    SetGameEnd(GER_Fired);
+                }, 10.0f, false);
+        }
     }
 }
 void UHotel_Manager::CheckManagerCallingForHR()
 {
-    if (!IsManagerFireWalker && nHumanResourcesScore <= 0)
+    if (HRService)
     {
-        Department_Operator->AddDialogueDataState("해고", EDialogueState::DS_Manager_Fire);
-        Department_Operator->SetGuestDialogueDataLast(true);
-        Department_Operator->EraseDialgueDataState(EDialogueState::DS_Manager_Warning);
-        Department_Operator->aPhone->TryCalling("0");
-        IsManagerFireWalker = true;
-        IsManagerWarningWalker = true; //해고전화는 안함
-    }
-    else if (!IsManagerWarningWalker && nHumanResourcesScore <= 50)
-    {
-        Department_Operator->AddDialogueDataState("경고", EDialogueState::DS_Manager_Warning);
-        Department_Operator->SetGuestDialogueDataLast(true);
-        Department_Operator->aPhone->TryCalling("0");
-        IsManagerWarningWalker = true;
+        HRService->CheckManagerCallingForHR(Department_Operator, WalkerNowLocation);
     }
 }
 
 void UHotel_Manager::PlusHRScore(int plusScore, FString Reason)
 {
-    nHumanResourcesScore += plusScore;
-    if (nHumanResourcesScore > 100) nHumanResourcesScore = 100;
-    FHRRecord tempRecord;
-    tempRecord.Minus = false;
-    tempRecord.Reason = Reason;
-    tempRecord.Score = plusScore;
-    arrHRRocord.Add(tempRecord);
+    if (HRService)
+    {
+        HRService->PlusScore(plusScore, Reason);
+    }
 }
 
 void UHotel_Manager::AddRegistPhone(FName Number, AHotel_Phone* Phone)
@@ -1606,165 +1572,108 @@ void UHotel_Manager::Execute_Event_Open305(FEventInfo* eventInfo)
 
 void UHotel_Manager::SaveLevelOption(int menual, int Enviroment)
 {
-    EnviromentLevel = Enviroment;
-    MenualLevel = menual;
-    SaveGameLevelOption();
+    if (PersistenceService)
+    {
+        PersistenceService->SaveLevelOption(menual, Enviroment);
+    }
 }
 
 void UHotel_Manager::SaveGameLevelOption()
 {
-    if (!HotelSaveGameOption) return;
-
-    // 옵션 저장
-    HotelSaveGameOption->MenualLevel = MenualLevel;
-    HotelSaveGameOption->EnviromentLevel = EnviromentLevel;
-    HotelSaveGameOption->arrExperiencedEventID = arrExperiencedEventID;
-    // 실제 디스크 저장                 
-    if (HotelSaveGameOption && IsValid(HotelSaveGameOption))
+    if (PersistenceService)
     {
-        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 세이브 완"));
-        UGameplayStatics::SaveGameToSlot(HotelSaveGameOption, TEXT("PlayerSaveSlot"), 0);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("HotelSaveGame is nullptr!"));
+        PersistenceService->SaveGameLevelOption();
     }
 }
 
 void UHotel_Manager::LoadGameLevelOption()
 {
-    if (UGameplayStatics::DoesSaveGameExist(TEXT("PlayerSaveSlot"), 0))
+    if (PersistenceService)
     {
-        HotelSaveGameOption = Cast<UHotelSaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("PlayerSaveSlot"), 0));
-
-        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 로드 완료"));
-        MenualLevel = HotelSaveGameOption->MenualLevel;
-        EnviromentLevel = HotelSaveGameOption->EnviromentLevel;
-        arrExperiencedEventID = HotelSaveGameOption->arrExperiencedEventID;
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("게임 레벨 로드 실패"));
-        HotelSaveGameOption = Cast<UHotelSaveGame>(UGameplayStatics::CreateSaveGameObject(UHotelSaveGame::StaticClass()));
-        MenualLevel = 1;
-        EnviromentLevel = 1;
-        arrExperiencedEventID.Empty();
+        PersistenceService->LoadGameLevelOption();
     }
 }
 
 bool UHotel_Manager::LoadGameManualExternal()
 {
-    FString SaveDir = FPaths::ProjectSavedDir();
-    FString FullPath = SaveDir / MenualSaveName;
-
-    FString FileData;
-    if (FFileHelper::LoadFileToString(FileData, *FullPath))
+    if (PersistenceService)
     {
-//        UE_LOG(LogTemp, Log, TEXT("불러온 텍스트:\n%s"), *FileData);
-        FioneerMenualText = FileData;
+        return PersistenceService->LoadGameManualExternal();
     }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("파일을 불러올 수 없음: %s"), *FullPath);
-        return false;
-    }
-
-    /* //Json 로드 언젠가 쓰일지도
-    FString SaveDir = FPaths::ProjectSavedDir();
-    FString FullPath = SaveDir / MenualSaveName;
-
-    UE_LOG(LogTemp, Warning, TEXT("경로 : %s"), *FullPath);
-    FString FileData;
-    if (!FFileHelper::LoadFileToString(FileData, *FullPath))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("파일을 불러올 수 없음: %s"), *FullPath);
-
-        return false;
-    }
-    TSharedPtr<FJsonObject> RootObject;
-    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(FileData);
-
-    if (!FJsonSerializer::Deserialize(Reader, RootObject) || !RootObject.IsValid())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("JSON 파싱 실패"));
-        return false;
-    }
-
-    MenualText.Empty(); // 기존 메뉴얼 초기화
-
-    const TArray<TSharedPtr<FJsonValue>>* ManualArray;
-    if (RootObject->TryGetArrayField(TEXT("Manuals"), ManualArray))
-    {
-        for (auto& Value : *ManualArray)
-        {
-            TSharedPtr<FJsonObject> Obj = Value->AsObject();
-            if (Obj.IsValid())
-            {
-                FManualInfo Info;
-                Info.Category = Obj->GetIntegerField(TEXT("Category"));
-                Info.EventID = Obj->GetIntegerField(TEXT("EventID"));
-                Info.MenualText = FText::FromString(Obj->GetStringField(TEXT("Text")));
-
-                MenualText.Add(Info);
-            }
-        }
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("JSON 메뉴얼 불러오기 완료: %s"), *FullPath);*/
-    return true;
+    return false;
 }
 
 bool UHotel_Manager::SaveGameManualExternal()
 {
-    FString SaveDir = FPaths::ProjectSavedDir(); // Saved/ 경로
-    FString FullPath = SaveDir / MenualSaveName;       // ex) Saved/ManualNote.txt
-
-    FString OutputText= FioneerMenualText;
-    FFileHelper::SaveStringToFile(OutputText, *FullPath);
-
-    /* //Json 세이브 언젠가 쓰일지도
-    FString SaveDir = FPaths::ProjectSavedDir();
-    FString FullPath = SaveDir / MenualSaveName;
-
-    TSharedRef<FJsonObject> RootObject = MakeShared<FJsonObject>();
-    TArray<TSharedPtr<FJsonValue>> ManualArray;
-
-    for (const FManualInfo& Info : MenualText)
+    if (PersistenceService)
     {
-        TSharedRef<FJsonObject> Obj = MakeShared<FJsonObject>();
-        Obj->SetNumberField(TEXT("Category"), Info.Category);
-        Obj->SetNumberField(TEXT("EventID"), Info.EventID);
-        Obj->SetStringField(TEXT("Text"), Info.MenualText.ToString());
-
-        ManualArray.Add(MakeShared<FJsonValueObject>(Obj));
+        return PersistenceService->SaveGameManualExternal();
     }
-
-    RootObject->SetArrayField(TEXT("Manuals"), ManualArray);
-
-    FString OutputString;
-    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
-    FJsonSerializer::Serialize(RootObject, Writer);
-
-    FFileHelper::SaveStringToFile(OutputString, *FullPath); 
-    */
-    return true;
+    return false;
 }
 
 void UHotel_Manager::InitMenualInfo()
 {
-    arrExperiencedEventID.Empty();//초기화
-    FioneerMenualText = "";
+    if (PersistenceService)
+    {
+        PersistenceService->InitMenualInfo();
+    }
 }
 
 void UHotel_Manager::UpdateDefualtLevelMenual(int EventId)
 {
-    if (MenualLevel != 1) return;
-    if(EventId > 0 && !arrExperiencedEventID.Contains(EventId))
+    if (PersistenceService)
     {
-        arrExperiencedEventID.Add(EventId);
-        arrExperiencedEventID.Sort();
+        PersistenceService->UpdateDefualtLevelMenual(EventId);
     }
-    SaveGameLevelOption();
+}
+
+int UHotel_Manager::GetEnviromentalLevel()
+{
+    return PersistenceService ? PersistenceService->GetEnviromentalLevel() : 1;
+}
+
+int UHotel_Manager::GetMenualLevel()
+{
+    return PersistenceService ? PersistenceService->GetMenualLevel() : 1;
+}
+
+void UHotel_Manager::SetFioneerMenaulText(FString temp)
+{
+    if (PersistenceService)
+    {
+        PersistenceService->SetFioneerMenaulText(temp);
+    }
+}
+
+FString UHotel_Manager::GetFioneerMenaulText()
+{
+    return PersistenceService ? PersistenceService->GetFioneerMenaulText() : FString();
+}
+
+TArray<FManualInfo>* UHotel_Manager::GetMenualInfo()
+{
+    return PersistenceService ? PersistenceService->GetMenualInfo() : nullptr;
+}
+
+TArray<int>* UHotel_Manager::GetExperiencedEventID()
+{
+    return PersistenceService ? PersistenceService->GetExperiencedEventID() : nullptr;
+}
+
+TArray<FHRRecord> UHotel_Manager::GetHRRecord()
+{
+    return HRService ? HRService->GetRecords() : TArray<FHRRecord>();
+}
+
+int UHotel_Manager::GetHRScore()
+{
+    return HRService ? HRService->GetScore() : 0;
+}
+
+bool UHotel_Manager::GetWalkerFired()
+{
+    return HRService ? HRService->GetWalkerFired() : false;
 }
 
 void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
@@ -1811,19 +1720,18 @@ void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
         if (Reason == GER_Fired)
         {
             Hotel_Clock->StopGameClock();
-            Level_Manager->PlayFireSequence();
         }
-        else
-        {
-            Level_Manager->LoadEndingLevel();
-        }
+        Level_Manager->HandleGameEnd(Reason);
     }
 
 }
 
 void UHotel_Manager::SetMainMenu()
 {
-    Level_Manager->LoadMainLevel();
+    if (Level_Manager)
+    {
+        Level_Manager->ShowMainMenu();
+    }
 }
 void UHotel_Manager::SettingInitGame(bool isContinue)
 {
@@ -1835,7 +1743,10 @@ void UHotel_Manager::SettingInitGame(bool isContinue)
     arrEventGuestController.Empty();
     arrReservationGuest.Empty();
     arrWaitingEventList.Empty();
-    arrHRRocord.Empty();
+    if (HRService)
+    {
+        HRService->ResetForNewGame();
+    }
 
     for (auto & temp : arrExecutingEventList)
     {
@@ -1847,9 +1758,6 @@ void UHotel_Manager::SettingInitGame(bool isContinue)
     IsGameEndPhase = false;
     EndReason = GER_NotYet;
     nNowExcutingEvent = 0;
-
-    IsManagerWarningWalker = false;
-    IsManagerFireWalker = false;
 
 
     CodeWord = FMath::RandRange(0, 9);
@@ -1867,7 +1775,10 @@ void UHotel_Manager::CompleteMainLevelLoad()
     }
     else
     {
-        nHumanResourcesScore = 100;
+        if (HRService)
+        {
+            HRService->ResetForNewGame();
+        }
         nWalkingDay = 1;
     }
 }

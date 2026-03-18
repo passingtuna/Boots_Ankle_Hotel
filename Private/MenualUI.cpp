@@ -258,7 +258,6 @@ void ULineLimitTextBox::HandleTextChange(const FText& Text)
     FVector2D TextSize = TextMeasureService->Measure(CurrentText, FontInfo);
     TextBoxSize = TextBox->GetCachedGeometry().GetLocalSize();
 
-    //UE_LOG(LogTemp, Warning, TEXT("잘러잇"));
     if (TextSize.X > TextBoxSize.X || TextSize.Y > TextBoxSize.Y)
     {
         // 글자가 초과되면 잘라내기

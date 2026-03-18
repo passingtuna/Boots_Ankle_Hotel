@@ -25,6 +25,7 @@ class BOOTS_ANKLE_HOTEL_API AHotel_Clock : public AHotel_Object
     int nEnviromentalLevle;
     bool bIsStopTime;
 
+    int LastDisplayedGameTime = -1;
     FTimerHandle ClockTimer;
 
     UHotel_Manager* Hotel_Manager;

@@ -67,7 +67,6 @@ void UPhoneDialUI::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 }
 void UPhoneDialUI::ReturnDial() 
 {
-    UE_LOG(LogTemp, Warning, TEXT("개 씨발새끼야 어디 안돌아가나 보자 씨발년"));
     RotationAngle = 0; 
 };
 

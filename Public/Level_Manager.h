@@ -13,6 +13,7 @@ class UMainMenuUI;
 class ULoadingUI;
 class UGameEndReportUI;
 class ALevelSequenceActor;
+enum EGameEndReason : int;
 
 UCLASS()
 class BOOTS_ANKLE_HOTEL_API ALevel_Manager : public AActor
@@ -49,6 +50,9 @@ public:
     void PlayFireSequence();
 
     void RingingBell();
+
+    void HandleGameEnd(EGameEndReason Reason);
+    void ShowMainMenu();
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
     ADirectionalLight* DirectionalLight;
 

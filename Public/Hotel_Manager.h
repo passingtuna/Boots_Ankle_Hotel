@@ -27,6 +27,8 @@ class UGuestDataAsset;
 class AHotel_Door;
 class UHotel_StaticMesh;
 class AAI_Hotel_Guest_Default;
+class UHotel_PersistenceService;
+class UHotel_HRService;
 
 static const TArray<FString> CodeWords =
 {
@@ -72,10 +74,14 @@ private:
     int CodeWord;
     bool IsAlreadyInit;
     ALevel_Manager* Level_Manager;
-    bool IsManagerWarningWalker;
-    bool IsManagerFireWalker;
 
     bool IsGameEndPhase;
+
+    UPROPERTY()
+    TObjectPtr<UHotel_PersistenceService> PersistenceService;
+
+    UPROPERTY()
+    TObjectPtr<UHotel_HRService> HRService;
 
     UPROPERTY()
     TMap<FName, AHotel_Phone*> mapRegistedPhone;
@@ -126,9 +132,6 @@ private:
     TArray <FString> arrReservationGuest;
     FTimerHandle GameEndTimer;
     FName WalkerNowLocation;
-
-    int nHumanResourcesScore;
-    TArray <FHRRecord> arrHRRocord;
     EGameEndReason EndReason;
 
     int nWalkingDay;
@@ -158,10 +161,10 @@ public:
     int  GetWalkingDay() { return nWalkingDay; };
     void CompleteMainLevelLoad();
 
-    TArray <FHRRecord> GetHRRecord() { return arrHRRocord; };
-    int GetHRScore() { return nHumanResourcesScore; };
+    TArray <FHRRecord> GetHRRecord();
+    int GetHRScore();
 
-    bool GetWalkerFired() { return IsManagerFireWalker; };
+    bool GetWalkerFired();
     FString GetReservationGuestName();
  //-----------------------이벤트----------------------------------
  private:
@@ -247,34 +250,18 @@ public:
     void ExecuteEvent_PeepingPlayer();
 
 
-//----------- 세이브 ---------------------
-private:
-    UPROPERTY()
-    FString MenualSaveName;
-    UPROPERTY()
-    int EnviromentLevel;
-    UPROPERTY()
-    int MenualLevel;
-    UPROPERTY()
-    TArray<int>arrExperiencedEventID;
-    UPROPERTY()
-    TArray<FManualInfo> DefualtMenualText;
-    UPROPERTY()
-    UHotelSaveGame* HotelSaveGameOption;
-    UPROPERTY()
-    FString FioneerMenualText;
-
+//----------- 세이브/옵션 ---------------------
 public:
-    int GetEnviromentalLevel() { return EnviromentLevel; };
-    int GetMenualLevel() { return MenualLevel; };
+    int GetEnviromentalLevel();
+    int GetMenualLevel();
 
-    void SetFioneerMenaulText(FString temp) { FioneerMenualText = temp; };
+    void SetFioneerMenaulText(FString temp);
     void InitMenualInfo();
     void UpdateDefualtLevelMenual(int EventId);
-    FString GetFioneerMenaulText() { return FioneerMenualText; };
+    FString GetFioneerMenaulText();
 
-    TArray<FManualInfo>* GetMenualInfo() { return &DefualtMenualText; };
-    TArray<int>* GetExperiencedEventID() { return &arrExperiencedEventID; };
+    TArray<FManualInfo>* GetMenualInfo();
+    TArray<int>* GetExperiencedEventID();
 
     void SaveLevelOption(int menual, int Enviroment);
     bool SaveGameManualExternal();
