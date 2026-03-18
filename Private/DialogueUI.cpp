@@ -80,6 +80,7 @@ void UDialogueUI::ViewSelectionDialogue()
     TextLineBox->SetText(FormatNamedLine);
     TextNameBox->SetText(FText::FromString(TEXT("근무자")));
 
+
     if (!ChooseButtonContainer) return;
     DeactivateAllButton();
     WaitButton->SetVisibility(ESlateVisibility::Collapsed);
@@ -153,7 +154,6 @@ void UDialogueUI::SetDialogueGuest(AHotel_Guest* GuestInfo, AHotel_Phone* Phone)
     NowGuestController = Cast<AAI_Hotel_Guest_Default>(NowGuest->GetController());
     if (NowGuestController)
     {
-        UE_LOG(LogTemp, Warning, TEXT("스땁 테이션트 타이머"));
         NowGuestController->StopPatienceTimer();
     }
 
@@ -235,7 +235,6 @@ FText UDialogueUI::GetFormatNamedText(const FString& Text)
 
 void UDialogueUI::PauseDialogue()
 {
-    //UE_LOG(LogTemp, Warning, TEXT("퍼즈 다이얼로그"));
     if (isPrevDisConnect)
     {
         EndDialogue();
@@ -246,7 +245,6 @@ void UDialogueUI::PauseDialogue()
         NowGuest->SetGuestDialogueData(NowDialogueData, NowGuestDialogueIndex);
         NowGuest->SetDialoguePause(NowGuestDialogueIndex , NowDialogueIndex);
 
-        UE_LOG(LogTemp, Warning, TEXT("인내심 대화 퍼즈"));
         GetWorld()->GetTimerManager().SetTimer(DialogueTimer, [this]() {NowGuest->GetAIController()->DecreasePatienceCount(true); }, 10 , false);
     }
     Hotel_Walker->HideUIName("Dialogue");
@@ -262,14 +260,12 @@ void UDialogueUI::PauseDialogue()
 void UDialogueUI::GuestWaitOvertime()
 {
     //대화를 너무 길게 멈추면 패널티
-    UE_LOG(LogTemp, Warning, TEXT("게스트 웨이팅 오버타임"));
     Hotel_Manager->MinusHRScore(10, TEXT("고객 응대 지연"));
     EndDialogue();
 }
 
 void UDialogueUI::EndDialogue()
 {
-    //UE_LOG(LogTemp, Warning, TEXT("엔드 다이얼로그"));
     NowGuest->EndGuestDialgue(NowGuestDialogueIndex);
     Hotel_Walker->HideUIName("Dialogue");
     if (isPrevDisConnect || isAlreadyEnd) return; 
@@ -379,7 +375,6 @@ void UDialogueUI::CheckIn()
         TextLineBox->SetText(FText::FromString(TEXT("장난 하시는겁니까?")));
         if (NowGuest && NowGuest->AIController)
         {
-            UE_LOG(LogTemp, Warning, TEXT("인내심 잘못된 선택지"));
             NowGuest->AIController->DecreasePatienceCount(false);
             if (NowGuest->AIController->GetPatienceCount() < 1)
             {
@@ -512,7 +507,6 @@ void UDialogueUI::DecereasePatience()
 {
     if (IsValid(NowGuest))
     {
-        UE_LOG(LogTemp, Warning, TEXT("대화에서 인내심 차감"));
         NowGuest->AIController->DecreasePatienceCount(false);
     }
 }

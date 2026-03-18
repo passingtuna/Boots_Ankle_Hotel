@@ -86,6 +86,11 @@ void ALevel_Manager::LoadMainLevel()
     UGameplayStatics::OpenLevel(this, FName("Level_Persistant"));
 
 }
+
+void ALevel_Manager::ShowMainMenu()
+{
+    LoadMainLevel();
+}
 void ALevel_Manager::LoadEndingLevel()
 {
 
@@ -199,4 +204,16 @@ void ALevel_Manager::PlayFireSequence()
     ULevelSequencePlayer* Player = SAEndGame->GetSequencePlayer();
     Player->OnFinished.AddDynamic(this, &ALevel_Manager::LoadEndingLevel);
     Player->Play();
+}
+
+void ALevel_Manager::HandleGameEnd(EGameEndReason Reason)
+{
+    if (Reason == GER_Fired)
+    {
+        PlayFireSequence();
+    }
+    else
+    {
+        LoadEndingLevel();
+    }
 }
