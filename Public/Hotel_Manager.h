@@ -29,6 +29,11 @@ class UHotel_StaticMesh;
 class AAI_Hotel_Guest_Default;
 class UHotel_PersistenceService;
 class UHotel_HRService;
+class AHotel_Light;
+class AHotel_Place;
+class UHotel_EventBase;
+class UHotel_OutbreakEventBase;
+class AHotel_Operator;
 
 static const TArray<FString> CodeWords =
 {
@@ -82,6 +87,18 @@ private:
 
     UPROPERTY()
     TObjectPtr<UHotel_HRService> HRService;
+
+    UPROPERTY()
+    TArray<TObjectPtr<UHotel_EventBase>> EventObjects;
+
+    UPROPERTY()
+    TMap<EHotelEventId, TObjectPtr<UHotel_EventBase>> EventById;
+
+    UPROPERTY()
+    TArray<TObjectPtr<UHotel_OutbreakEventBase>> OutbreakEventObjects;
+
+    UPROPERTY()
+    TMap<EHotelOutbreakEventId, TObjectPtr<UHotel_OutbreakEventBase>> OutbreakById;
 
     UPROPERTY()
     TMap<FName, AHotel_Phone*> mapRegistedPhone;
@@ -146,6 +163,16 @@ public:
     void TryCalling(AHotel_Phone* calledPhone, FName nowCallingPhoneNum);
     void UpdateWalkerLocation(FName locationName);
     FName GetWalkerLocation() { return WalkerNowLocation; };
+    AHotel_Door* GetStaffDoor() { return StaffDoor; }
+    AHotel_Light* GetStreetLight() { return StreetLight; }
+    AActor* GetAutoDoor() { return AutoDoor; }
+    AHotel_Place* GetPlaceByName(FName Name);
+    AHotel_Operator* GetDepartmentOperator() { return Department_Operator; }
+
+    class AHotel_CCTV* GetCCTV() { return Hotel_CCTV; }
+    class UHotel_StaticMesh* GetHotelMeshByName(FName Name);
+    FRoomInfo* FindRoomInfoByName(FName RoomKey);
+    const TMap<FName, FRoomInfo>& GetRegisteredRooms() const { return mapRegistedRoom; }
     UDialogueDataAsset* GetDialogueData(FName dialogueData);
     void SettingReservationGuest();
     void MinusHRScore(int minusScore, FString reason);
@@ -170,7 +197,7 @@ public:
  private:
      int nNowExcutingEvent;
      TArray <FExcuteFunctionInfo> arrEventFuntionList;
-     TMap <FName, FExcuteFunctionInfo> mapOutbreakEventFuntion;
+     TMap <EHotelOutbreakEventId, FExcuteFunctionInfo> mapOutbreakEventFuntion;
      TArray <TObjectPtr<UEventInfo>> arrOutbreakEventList;
      TArray <TObjectPtr<UEventInfo>> arrWaitingEventList;
 
@@ -186,70 +213,10 @@ public:
     void CheckExecuteFunctionTiming(EFunctionExcuteTiming nowTiming, AHotel_Guest* targetGuest);
 
     void CheckExcuteBasicRule(FName triggerName);
-    void AddOutbreakEventList(AHotel_Guest* guest , FName eventName);
+    void AddOutbreakEventList(AHotel_Guest* guest , EHotelOutbreakEventId eventId);
 
 
-    //-----------------------------지역 이벤트---------------------------------------- 
-    void Execute_Event_Open205(UEventInfo*  eventInfo);//205호 등장
-    bool CheckClear_Event_Open205(UEventInfo*  eventInfo, FName triggerName);
-    void Fail_Event_Open205();
-
-    /*
-    void Execute_Event_OpenBasement(FEventInfo* eventInfo);//지하실 등장
-    bool CheckClear_Event_OpenBasement(FEventInfo* eventInfo, FName triggerName);
-
-    void Execute_Event_Open305(FEventInfo* eventInfo);//305호 등장
-    bool CheckClear_Event_Open305(FEventInfo* eventInfo, FName triggerName);
-    */
-
-    //-----------------------------외부 손님---------------------------------------- 
-    void Execute_Event_StarePeopleUnderLight(UEventInfo*  eventInfo);//가로등 밑의 사람
-    void LookingTiemOver_StarePeopleUnderLight();
-    bool CheckClear_Event_StarePeopleUnderLight(UEventInfo*  eventInfo, FName triggerName);
-
-    void Execute_Event_Invader(UEventInfo*  eventInfo); //스테프 온리 문을 안잠그고 다닐시
-    void UnlockTiemOver_Invader();
-    bool CheckClear_Event_Invader(UEventInfo*  eventInfo, FName TriggerName);
-
-    //-----------------------------랜덤 실행 이벤트----------------------------------------
-
-    void Execute_AreaFlickingLight(UEventInfo*  eventInfo); // 불 깜빡임
-    bool CheckClear_AreaFlickingLight(UEventInfo*  eventInfo, FName TriggerName);
-    void Execute_Only_MakeDirtyRoom(UEventInfo*  eventInfo);    //
-    void Execute_Only_Imposter_Request_Reject_Check(UEventInfo*  eventInfo);    //
-
-    //-----------------------------상황별 추가 이벤트---------------------------------------- 
-
-    void Execute_Event_Complain_RoomDirty(UEventInfo*  eventInfo);
-    bool CheckClear_Complain_RoomDirty(UEventInfo*  eventInfo, FName triggerName);
-
-    void Execute_Event_Request_Reject_CheckIn(UEventInfo*  eventInfo);
-    bool CheckClear_Request_Reject_CheckIn(UEventInfo*  eventInfo, FName triggerName);
-
-    void Execute_Event_Allocate_Room(UEventInfo*  eventInfo);
     FString GetAllocateRoomNum();
-    bool CheckClear_Allocate_Room(UEventInfo*  eventInfo, FName triggerName);
-
-    void Execute_Event_InfinityStair(UEventInfo*  eventInfo);         // 무한 계단
-    bool CheckClear_Event_InfinityStair(UEventInfo*  eventInfo, FName triggerName);
-
-    //-----------------------------체크인 이벤트---------------------------------------- 
-
-    void ExecuteEvent_Guest_LostSignalCCTV(UEventInfo*  eventInfo);   //입장시 cctv 끊김
-    bool CheckClear_Guest_LostSignalCCTV(UEventInfo*  eventInfo, FName triggerName); //
-
-    void ExecuteEvent_Guest_Hanging(UEventInfo*  eventInfo);
-    bool CheckClear_Guest_Hanging(UEventInfo*  eventInfo, FName triggerName);
-
-    void ExecuteEvent_Guest_RoomCCTV(UEventInfo*  eventInfo);
-    bool CheckClear_Guest_RoomCCTV(UEventInfo*  eventInfo, FName triggerName);
-
-    void ExecuteEvent_Guest_InvisibleCamera(UEventInfo*  eventInfo);
-    bool CheckClear_Guest_InvisibleCamera(UEventInfo*  eventInfo, FName triggerName); //
-
-    void ExecuteEvent_PeepingPlayer();
-
-
 //----------- 세이브/옵션 ---------------------
 public:
     int GetEnviromentalLevel();

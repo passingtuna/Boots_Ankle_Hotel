@@ -274,7 +274,7 @@ void AAI_Hotel_Guest_Default::CheckingRoomCondition()
 
             if (!AssignedGuestRoom->CheckRoomDirty()) //방이 더러우면 전화로 컴플레인한다
             {
-                Hotel_Manager->AddOutbreakEventList(Hotel_Guest, FName("ComplainRoomDirty"));
+                Hotel_Manager->AddOutbreakEventList(Hotel_Guest, EHotelOutbreakEventId::ComplainRoomDirty);
             }
         }
     }

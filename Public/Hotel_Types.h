@@ -91,6 +91,30 @@ enum EGameEndReason
     GER_NotYet, GER_Dead, GER_Fired, GER_Clear
 };
 
+UENUM(BlueprintType)
+enum class EHotelEventId : int32
+{
+    None = 0,
+    Invader = 1,
+    GuestRoomCCTV = 3,
+    GuestHanging = 5,
+    Open205 = 6,
+    StareUnderLight = 7,
+    GuestLostSignalCCTV = 8,
+    GuestInvisibleCamera = 9,
+};
+
+UENUM(BlueprintType)
+enum class EHotelOutbreakEventId : uint8
+{
+    None = 0,
+    ComplainRoomDirty,
+    RequestRejectCheckIn,
+    AllocateRoomGuest,
+    MakeDirtyRoom,
+    ImpostorRequestRejectCheckIn,
+};
+
 struct FExcuteFunctionInfo
 {
     int EventID;
