@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Hotel_Event_GuestHanging.h"
 
 #include "AI_Hotel_Guest_Default.h"
@@ -18,8 +16,6 @@ UHotel_Event_GuestHanging::UHotel_Event_GuestHanging()
 void UHotel_Event_GuestHanging::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("행잉 게스트"));
 	EventInfo->isAreadyExcute = true;
 
 	Manager->ActivateGuest(EventInfo->EventGuest, true);
@@ -31,57 +27,71 @@ void UHotel_Event_GuestHanging::Execute(UHotel_Manager* Manager, UEventInfo* Eve
 	}
 }
 
-bool UHotel_Event_GuestHanging::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_GuestHanging::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return false;
 
 	AAI_Hotel_Guest_Default* AI = EventInfo->EventGuest->GetAIController();
 	if (!AI || !AI->AssignedGuestRoom) return false;
 
-	if (FName(EventInfo->EventGuest->GuestName + "_OutHotel") == TriggerName)
+	const FString* GuestNamePayload = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	if (Trigger.Type == EHotelTriggerType::GuestOutHotel
+		&& GuestNamePayload
+		&& *GuestNamePayload == EventInfo->EventGuest->GuestName)
 	{
 		return true;
 	}
 
 	if (EventInfo->CollectedTriggers.Num() == 0)
 	{
-		TArray<FString> Parts;
-		TriggerName.ToString().ParseIntoArray(Parts, TEXT("_"), true);
-		if (Parts.Num() >= 2 && Parts[0] == EventInfo->EventGuest->GuestName && Parts[1] == "CheckIn")
+		const FString* RoomNumberPayload = Trigger.Payload.Find(EHotelTriggerKey::RoomNumber);
+		if (Trigger.Type == EHotelTriggerType::GuestCheckIn
+			&& GuestNamePayload && RoomNumberPayload
+			&& *GuestNamePayload == EventInfo->EventGuest->GuestName
+			&& *RoomNumberPayload == AI->AssignedGuestRoom->RoomNumber.ToString())
 		{
-			EventInfo->CollectedTriggers.Add(TriggerName);
+			EventInfo->CollectedTriggers.Add(Trigger);
 		}
 		return false;
 	}
 
 	const FString RoomNumber = AI->AssignedGuestRoom->RoomNumber.ToString();
+	const FString* ReportTarget = Trigger.Payload.Find(EHotelTriggerKey::Target);
+	const bool bSecurityReportForRoom = (Trigger.Type == EHotelTriggerType::SecurityReport && ReportTarget && *ReportTarget == RoomNumber);
 
 	if (EventInfo->EventGuest->IsWierdHanging)
 	{
-		if (FName("SecurityReport_" + RoomNumber) == TriggerName)
+		if (bSecurityReportForRoom)
 		{
 			EventInfo->EventGuest->SetActorHiddenInGame(true);
 			EventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0));
 			EventInfo->EventGuest->CheckOutGuest();
-			EventInfo->CollectedTriggers.Add(TriggerName);
+			EventInfo->CollectedTriggers.Add(Trigger);
 			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
 			return true;
 		}
 	}
 	else
 	{
-		if (FName(EventInfo->EventGuest->GuestName + "_HangingNeck") == TriggerName)
+		if (Trigger.Type == EHotelTriggerType::GuestHangingNeck
+			&& GuestNamePayload
+			&& *GuestNamePayload == EventInfo->EventGuest->GuestName)
 		{
 			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
 			return true;
 		}
 	}
 
-	const FName CheckTriggerName = FName(EventInfo->EventGuest->GuestName + "_In_" + RoomNumber);
-	if (CheckTriggerName == TriggerName)
+	if (Trigger.Type == EHotelTriggerType::PlaceStateChange
+		&& GuestNamePayload
+		&& *GuestNamePayload == EventInfo->EventGuest->GuestName)
 	{
+		const FString* PlaceState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+		if (!HotelTriggerStateEquals(PlaceState, EHotelObjectState::In)) return false;
 		TWeakObjectPtr<AHotel_Guest> WeakGuest(EventInfo->EventGuest);
-		Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakGuest]()
+		World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakGuest]()
 			{
 				if (!WeakGuest.IsValid()) return;
 				AAI_Hotel_Guest_Default* LocalAI = WeakGuest->GetAIController();

@@ -115,14 +115,81 @@ enum class EHotelOutbreakEventId : uint8
     ImpostorRequestRejectCheckIn,
 };
 
+UENUM(BlueprintType)
+enum class EHotelTriggerType : uint8
+{
+    Unknown = 0,
+    PlaceStateChange,
+    TryCall,
+    LookStateChange,
+    InvadeInvader,
+    SecurityReport,
+    RoomAssigned,
+    SwitchStateChange,
+    DoorStateChange,
+    PeepingDoor,
+    CCTVStateChange,
+    GameEnd,
+    GuestOutHotel,
+    GuestCheckIn,
+    GuestHangingNeck,
+};
+
+UENUM(BlueprintType)
+enum class EHotelTriggerKey : uint8
+{
+    Instigator,
+    Place,
+    RoomNumber,
+    Target,
+    ObjectState,
+};
+
+UENUM(BlueprintType)
+enum class EHotelObjectState : uint8
+{
+    None = 0,
+    In,
+    Out,
+    Look,
+    NoLook,
+    On,
+    Off,
+    Open,
+    Close,
+    Lock,
+    UnLock,
+    Start,
+    End,
+    View,
+};
+
+USTRUCT(BlueprintType)
+struct FHotelTrigger
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    EHotelTriggerType Type = EHotelTriggerType::Unknown;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TMap<EHotelTriggerKey, FString> Payload;
+
+    static FHotelTrigger Make(EHotelTriggerType InType, const TMap<EHotelTriggerKey, FString>& InPayload = {});
+    bool operator==(const FHotelTrigger& Other) const;
+};
+
+FString HotelTriggerStateToString(EHotelObjectState State);
+bool HotelTriggerStateEquals(const FString* Value, EHotelObjectState State);
+
 struct FExcuteFunctionInfo
 {
     int EventID;
     EFunctionExcuteTiming ExecuteTiming = FET_Init;
     bool isEventOnlyOnce = false;
-    bool isExcutingOnlyEvent = false;//실행만하고 따로 트리거 체크를 하지않아 대기 리스트에 넣지 않음
+    bool isExcutingOnlyEvent = false;
     TFunction<void(UEventInfo* eventInfo)> ExecuteFunction;
-    TFunction<bool(UEventInfo* eventInfo, FName trigger)> CheckClearFunction;
+    TFunction<bool(UEventInfo* eventInfo, const FHotelTrigger& trigger)> CheckClearFunction;
 };
 
 struct FEventInfo
@@ -132,7 +199,7 @@ struct FEventInfo
     FTimerHandle EventTimer;
     bool isNormalGuestEvent = true;
     bool isAreadyExcute = false;
-    TArray<FName> CollectedTriggers;
+    TArray<FHotelTrigger> CollectedTriggers;
     FExcuteFunctionInfo FunctionInfo;
 };
 

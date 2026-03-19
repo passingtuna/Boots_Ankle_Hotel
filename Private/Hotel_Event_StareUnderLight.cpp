@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Hotel_Event_StareUnderLight.h"
 
 #include "Hotel_Guest.h"
@@ -22,8 +20,6 @@ UHotel_Event_StareUnderLight::UHotel_Event_StareUnderLight()
 void UHotel_Event_StareUnderLight::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("가로등 밑에서 쳐다봄"));
 	EventInfo->isAreadyExcute = true;
 
 	Manager->ActivateGuest(EventInfo->EventGuest, false);
@@ -55,27 +51,57 @@ void UHotel_Event_StareUnderLight::TriggerNoLook(UHotel_Manager* Manager)
 		StreetLight->FlickeringOnce();
 	}
 
-	Manager->OnEventTriggerAction("NoLookAtGuest");
+	Manager->OnEventTriggerAction(
+		FHotelTrigger::Make(EHotelTriggerType::LookStateChange,
+			{
+				{ EHotelTriggerKey::Instigator, TEXT("Walker") },
+				{ EHotelTriggerKey::Target, EventInfo->EventGuest->GuestName },
+				{ EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::NoLook) },
+			}));
 }
 
-bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return false;
+	const FString* ReportTarget = Trigger.Payload.Find(EHotelTriggerKey::Target);
+	const FString* SwitchPlace = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* SwitchState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	const FString* LookInstigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	const bool bSecurityReportLobby = (Trigger.Type == EHotelTriggerType::SecurityReport && ReportTarget && *ReportTarget == "Lobby");
+	const bool bLookAtGuest = (Trigger.Type == EHotelTriggerType::LookStateChange
+		&& LookInstigator && ReportTarget && SwitchState
+		&& *LookInstigator == TEXT("Walker")
+		&& *ReportTarget == EventInfo->EventGuest->GuestName
+		&& HotelTriggerStateEquals(SwitchState, EHotelObjectState::Look));
+	const bool bNoLookAtGuest = (Trigger.Type == EHotelTriggerType::LookStateChange
+		&& LookInstigator && ReportTarget && SwitchState
+		&& *LookInstigator == TEXT("Walker")
+		&& *ReportTarget == EventInfo->EventGuest->GuestName
+		&& HotelTriggerStateEquals(SwitchState, EHotelObjectState::NoLook));
+	const bool bSwitchOff = (Trigger.Type == EHotelTriggerType::SwitchStateChange
+		&& SwitchPlace && SwitchState
+		&& *SwitchPlace == "1F"
+		&& HotelTriggerStateEquals(SwitchState, EHotelObjectState::Off));
+	const bool bLastSecurityReportLobby = !EventInfo->CollectedTriggers.IsEmpty()
+		&& EventInfo->CollectedTriggers.Last().Type == EHotelTriggerType::SecurityReport
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Target) == "Lobby";
 
-	if (TriggerName == "SecurityReport_0" && EventInfo->CollectedTriggers.Num() > 5)
+	if (bSecurityReportLobby && EventInfo->CollectedTriggers.Num() > 5)
 	{
-		EventInfo->CollectedTriggers.Add(TriggerName);
+		EventInfo->CollectedTriggers.Add(Trigger);
 	}
-	else if (TriggerName == "LookAtGuest")
+	else if (bLookAtGuest)
 	{
-		if (!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() == "SecurityReport_0") return false;
-		if (EventInfo->CollectedTriggers.IsEmpty() || EventInfo->CollectedTriggers.Last() != TriggerName)
+		if (bLastSecurityReportLobby) return false;
+		if (EventInfo->CollectedTriggers.IsEmpty() || EventInfo->CollectedTriggers.Last().Type != Trigger.Type)
 		{
-			EventInfo->CollectedTriggers.Add(TriggerName);
+			EventInfo->CollectedTriggers.Add(Trigger);
 		}
 
 		TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
-		Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
+		World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
 			{
 				if (WeakManager.IsValid())
 				{
@@ -83,9 +109,9 @@ bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInf
 				}
 			}, FMath::RandRange(10, 12), false);
 	}
-	else if (TriggerName == "NoLookAtGuest" || TriggerName == "1F_Switch_Off")
+	else if (bNoLookAtGuest || bSwitchOff)
 	{
-		if (EventInfo->CollectedTriggers.Num() != 0 && EventInfo->CollectedTriggers.Last() == "SecurityReport_0")
+		if (bLastSecurityReportLobby)
 		{
 			EventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0), false, false);
 			EventInfo->EventGuest->DeactivateGuest();
@@ -93,12 +119,12 @@ bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInf
 			return true;
 		}
 
-		Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+		World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 		if (EventInfo->EventGuest->bWasLookingAtGuest) EventInfo->EventGuest->bWasLookingAtGuest = false;
 
-		if ((!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() != TriggerName))
+		if ((!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last().Type != Trigger.Type))
 		{
-			EventInfo->CollectedTriggers.Add(TriggerName);
+			EventInfo->CollectedTriggers.Add(Trigger);
 		}
 
 		AHotel_Light* StreetLight = Manager->GetStreetLight();

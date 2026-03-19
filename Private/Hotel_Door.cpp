@@ -132,9 +132,13 @@ void AHotel_Door::ToggleOpenByWalker()
         Hotel_Walker->StopPeeping();
     }
 
-    FString temp = isOpen ? DoorName.ToString() + "Door_Open" : DoorName.ToString() + "Door_Close";
-
-    Hotel_Manager->OnEventTriggerAction(FName(temp));
+    Hotel_Manager->OnEventTriggerAction(
+        FHotelTrigger::Make(
+            EHotelTriggerType::DoorStateChange,
+            {
+                { EHotelTriggerKey::Place, DoorName.ToString() },
+                { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(isOpen ? EHotelObjectState::Open : EHotelObjectState::Close) },
+            }));
 }
 void AHotel_Door::ToggleLockByWalker()
 {
@@ -150,9 +154,14 @@ void AHotel_Door::ToggleLockByWalker()
     isLock = !isLock;
     isLock ? PlaySound("Lock") : PlaySound("Unlock");
 
-    FString temp = isLock ? DoorName.ToString() + "Door_Lock" : DoorName.ToString() + "Door_UnLock";
-
-    Hotel_Manager->OnEventTriggerAction(FName(temp));
+    // Lock / Unlock도 DoorStateChange로 트리거 전송
+    Hotel_Manager->OnEventTriggerAction(
+        FHotelTrigger::Make(
+            EHotelTriggerType::DoorStateChange,
+            {
+                { EHotelTriggerKey::Place, DoorName.ToString() },
+                { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(isLock ? EHotelObjectState::Lock : EHotelObjectState::UnLock) },
+            }));
 }
 
 void AHotel_Door::ToggleOpen()
@@ -238,7 +247,6 @@ void AHotel_Door::Peeping()
     if (isOpen) return; //열린문은 훔쳐볼수 없음
     CheckInteractLocation();
 
-    FString temp;
     if (!isInside)
     {
         PeepingHoleOutside->SetVisibility(true,true);
@@ -246,7 +254,13 @@ void AHotel_Door::Peeping()
         PeepingCameraOutside->Activate();
         PeepingFaceMeshOutside->SetVisibility(isActivePeepingFaceOutside);
         Hotel_Walker->SetPeeping(true, this);
-        temp = DoorName.ToString() + "Door_InPeeping";
+        Hotel_Manager->OnEventTriggerAction(
+            FHotelTrigger::Make(
+                EHotelTriggerType::PeepingDoor,
+                {
+                    { EHotelTriggerKey::Place, DoorName.ToString() },
+                    { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Start) },
+                }));
     }
     else
     {
@@ -255,9 +269,14 @@ void AHotel_Door::Peeping()
         PeepingCameraInside->Activate();
         PeepingFaceMeshInside->SetVisibility(isActivePeepingFaceInside);
         Hotel_Walker->SetPeeping(true, this);
-        temp = DoorName.ToString() + "Door_OutPeeping";
+        Hotel_Manager->OnEventTriggerAction(
+            FHotelTrigger::Make(
+                EHotelTriggerType::PeepingDoor,
+                {
+                    { EHotelTriggerKey::Place, DoorName.ToString() },
+                    { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Start) },
+                }));
     }
-    Hotel_Manager->OnEventTriggerAction(FName(temp));
     PlaySound("Peep");
 }
 
@@ -267,17 +286,13 @@ void AHotel_Door::PeepingEnd()
     PeepingHoleOutside->SetVisibility(false, true);
     PeepingCameraInside->Deactivate();
     PeepingCameraOutside->Deactivate();
-    if (isInside)
-    {
-        FString temp = DoorName.ToString() + "Door_InPeepingEnd";
-        Hotel_Manager->OnEventTriggerAction(FName(temp));
-    }
-    else
-    {
-        FString temp = DoorName.ToString() + "Door_OutPeepingEnd";
-        Hotel_Manager->OnEventTriggerAction(FName(temp));
-        
-    }
+    Hotel_Manager->OnEventTriggerAction(
+        FHotelTrigger::Make(
+            EHotelTriggerType::PeepingDoor,
+            {
+                { EHotelTriggerKey::Place, DoorName.ToString() },
+                { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::End) },
+            }));
 }
 
 void AHotel_Door::MovePeepingEye(FVector2D LookAxisVector)

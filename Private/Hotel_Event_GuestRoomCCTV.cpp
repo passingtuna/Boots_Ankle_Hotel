@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Hotel_Event_GuestRoomCCTV.h"
 
 #include "Hotel_CCTV.h"
@@ -28,22 +26,31 @@ void UHotel_Event_GuestRoomCCTV::Execute(UHotel_Manager* Manager, UEventInfo* Ev
 	}
 }
 
-bool UHotel_Event_GuestRoomCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_GuestRoomCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return false;
 
 	if (!EventInfo->EventGuest->GetAIController() || !EventInfo->EventGuest->GetAIController()->AssignedGuestRoom) return false;
 	AHotel_Guest_Room* GuestRoom = EventInfo->EventGuest->GetAIController()->AssignedGuestRoom;
-	const FString RoomNumber = GuestRoom->RoomNumber.ToString();
+	const FString RoomPlace = GuestRoom->RoomNumber.ToString();
 
 	AHotel_CCTV* CCTV = Manager->GetCCTV();
 	if (!CCTV) return false;
 
-	if (FName(EventInfo->EventGuest->GuestName + "_In_" + RoomNumber) == TriggerName)
+	const FString* GuestNamePayload = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	const FString* PlacePayload = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* PlaceState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	if (Trigger.Type == EHotelTriggerType::PlaceStateChange
+		&& GuestNamePayload && PlacePayload
+		&& HotelTriggerStateEquals(PlaceState, EHotelObjectState::In)
+		&& *GuestNamePayload == EventInfo->EventGuest->GuestName
+		&& *PlacePayload == RoomPlace)
 	{
 		TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
 		TWeakObjectPtr<AHotel_Guest> WeakGuest(EventInfo->EventGuest);
-		Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakGuest]()
+		World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakGuest]()
 			{
 				if (!WeakManager.IsValid() || !WeakGuest.IsValid()) return;
 				AHotel_Guest_Room* R = WeakGuest->GetAIController() ? WeakGuest->GetAIController()->AssignedGuestRoom : nullptr;
@@ -57,42 +64,62 @@ bool UHotel_Event_GuestRoomCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo*
 		GuestRoom->SetIsolationState(true);
 	}
 
-	TArray<FString> Parts;
-	TriggerName.ToString().ParseIntoArray(Parts, TEXT("_"), true);
-
 	if (EventInfo->CollectedTriggers.Num() < 7)
 	{
-		if (TriggerName == "Walker_Out_Counter")
+		const FString* Place = Trigger.Payload.Find(EHotelTriggerKey::Place);
+		const FString* Instigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+		const FString* State = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+		const bool bWalkerOutCounter = (Trigger.Type == EHotelTriggerType::PlaceStateChange
+			&& Instigator && State && Place
+			&& *Instigator == TEXT("Walker")
+			&& HotelTriggerStateEquals(State, EHotelObjectState::Out)
+			&& *Place == "Counter");
+		const bool bWalkerEnterCounter = (Trigger.Type == EHotelTriggerType::PlaceStateChange
+			&& Instigator && State && Place
+			&& *Instigator == TEXT("Walker")
+			&& HotelTriggerStateEquals(State, EHotelObjectState::In)
+			&& *Place == "Counter");
+		if (bWalkerOutCounter)
 		{
 			if (CCTV->GetRoomCameraIndex(GuestRoom->aCCTV_Camera->CameraName) == CCTV->GetNowCameraNum())
 			{
-				Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+				World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 				for (int i = EventInfo->CollectedTriggers.Num(); i < 5; i++)
 				{
-					EventInfo->CollectedTriggers.Add(FName("ViewCCTV_" + RoomNumber));
+					EventInfo->CollectedTriggers.Add(
+						FHotelTrigger::Make(
+							EHotelTriggerType::CCTVStateChange,
+							{
+								{ EHotelTriggerKey::Place, RoomPlace },
+								{ EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::View) },
+							}));
 					EventInfo->EventGuest->SetLookingCameraStatue(EventInfo->CollectedTriggers.Num(), GuestRoom->aCCTV_Camera);
 				}
 			}
 		}
-		else if (TriggerName == "Walker_Enter_Counter")
+		else if (bWalkerEnterCounter)
 		{
 			if (CCTV->GetRoomCameraIndex(GuestRoom->aCCTV_Camera->CameraName) == CCTV->GetNowCameraNum())
 			{
-				Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
-				EventInfo->CollectedTriggers.Add(TriggerName);
+				World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+				EventInfo->CollectedTriggers.Add(Trigger);
 				EventInfo->EventGuest->SetLookingCameraStatue(EventInfo->CollectedTriggers.Num(), GuestRoom->aCCTV_Camera);
 				Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
 			}
 		}
-		else if (Parts.Num() >= 2 && Parts[0] == "ViewCCTV")
+		else if (Trigger.Type == EHotelTriggerType::CCTVStateChange)
 		{
-			if (Parts[1] == RoomNumber)
+			const FString* CCTVPlace = Trigger.Payload.Find(EHotelTriggerKey::Place);
+			const FString* CCTVState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+			if (CCTVPlace && CCTVState
+				&& *CCTVPlace == RoomPlace
+				&& HotelTriggerStateEquals(CCTVState, EHotelObjectState::View))
 			{
-				EventInfo->CollectedTriggers.Add(TriggerName);
+				EventInfo->CollectedTriggers.Add(Trigger);
 				EventInfo->EventGuest->SetLookingCameraStatue(EventInfo->CollectedTriggers.Num(), GuestRoom->aCCTV_Camera);
-				const FName Copy = TriggerName;
+				const FHotelTrigger Copy = Trigger;
 				TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
-				Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, Copy]()
+				World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, Copy]()
 					{
 						if (WeakManager.IsValid())
 						{
@@ -102,7 +129,7 @@ bool UHotel_Event_GuestRoomCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo*
 			}
 			else
 			{
-				Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+				World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 			}
 		}
 	}

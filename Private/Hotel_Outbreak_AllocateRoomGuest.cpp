@@ -16,6 +16,8 @@ UHotel_Outbreak_AllocateRoomGuest::UHotel_Outbreak_AllocateRoomGuest()
 void UHotel_Outbreak_AllocateRoomGuest::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return;
 
 	// 빈 방 목록 수집 (205/305 제외)
 	TArray<FString> EmptyRooms;
@@ -33,11 +35,17 @@ void UHotel_Outbreak_AllocateRoomGuest::Execute(UHotel_Manager* Manager, UEventI
 	}
 	if (EmptyRooms.IsEmpty()) return;
 
-	EventInfo->CollectedTriggers.Add(FName("AllocateRoomNum_" + EmptyRooms[FMath::RandRange(0, EmptyRooms.Num() - 1)]));
+	const FString AllocatedRoom = EmptyRooms[FMath::RandRange(0, EmptyRooms.Num() - 1)];
+	EventInfo->CollectedTriggers.Add(
+		FHotelTrigger::Make(
+			EHotelTriggerType::RoomAssigned,
+			{
+				{ EHotelTriggerKey::Target, AllocatedRoom },
+			}));
 
 	TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
 	TWeakObjectPtr<UEventInfo> WeakEvent(EventInfo);
-	Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
+	World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
 		{
 			if (!WeakManager.IsValid() || !WeakEvent.IsValid()) return;
 			AHotel_Operator* Op = WeakManager->GetDepartmentOperator();
@@ -49,31 +57,27 @@ void UHotel_Outbreak_AllocateRoomGuest::Execute(UHotel_Manager* Manager, UEventI
 		}, FMath::RandRange(2, 8), false);
 }
 
-bool UHotel_Outbreak_AllocateRoomGuest::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Outbreak_AllocateRoomGuest::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
 	if (EventInfo->CollectedTriggers.IsEmpty()) return false;
 
-	TArray<FString> TriggerParts;
-	TriggerName.ToString().ParseIntoArray(TriggerParts, TEXT("_"), true);
-	if (TriggerParts.Num() < 2) return false;
+	const FString* Instigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	if (!Instigator || *Instigator != EventInfo->EventGuest->GuestName) return false;
 
-	TArray<FString> AllocParts;
-	EventInfo->CollectedTriggers.Last().ToString().ParseIntoArray(AllocParts, TEXT("_"), true);
-	if (AllocParts.Num() < 2) return false;
+	const FString AllocatedRoom = EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Target);
 
-	if (TriggerParts[0] != EventInfo->EventGuest->GuestName) return false;
-
-	if (TriggerParts[1] == "CheckIn")
+	if (Trigger.Type == EHotelTriggerType::GuestCheckIn)
 	{
-		if (TriggerParts.Num() >= 3 && TriggerParts[2] == AllocParts[1])
+		const FString* CheckedInRoom = Trigger.Payload.Find(EHotelTriggerKey::RoomNumber);
+		if (CheckedInRoom && *CheckedInRoom == AllocatedRoom)
 		{
 			return true;
 		}
 		Manager->MinusHRScore(20, TEXT("지시 불이행"));
 		return true;
 	}
-	else if (TriggerParts[1] == "OutHotel")
+	else if (Trigger.Type == EHotelTriggerType::GuestOutHotel)
 	{
 		Manager->MinusHRScore(20, TEXT("지시 불이행"));
 		return true;

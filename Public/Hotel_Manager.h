@@ -52,7 +52,7 @@ public:
     FTimerHandle EventTimer;
     bool isNormalGuestEvent = true;
     bool isAreadyExcute = false;
-    TArray<FName> CollectedTriggers;
+    TArray<FHotelTrigger> CollectedTriggers;
     FExcuteFunctionInfo FunctionInfo;
 };
 
@@ -206,13 +206,13 @@ public:
 
  public:
     void SettingEvent();
-    bool OnEventTriggerAction(FName triggerName);
+    bool OnEventTriggerAction(const FHotelTrigger& trigger);
     void AddNextExecutiongEventList();
     void ExcuteEventFail();
     void RemoveExecutingEvent(UEventInfo* tartgetEvent);
     void CheckExecuteFunctionTiming(EFunctionExcuteTiming nowTiming, AHotel_Guest* targetGuest);
 
-    void CheckExcuteBasicRule(FName triggerName);
+    void CheckExcuteBasicRule(const FHotelTrigger& Trigger);
     void AddOutbreakEventList(AHotel_Guest* guest , EHotelOutbreakEventId eventId);
 
 

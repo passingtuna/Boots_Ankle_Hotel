@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Hotel_Event_Invader.h"
 
 #include "Hotel_Door.h"
@@ -17,8 +15,6 @@ UHotel_Event_Invader::UHotel_Event_Invader()
 void UHotel_Event_Invader::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("인베이더 출몰"));
 	EventInfo->isAreadyExcute = true;
 
 	Manager->ActivateGuest(EventInfo->EventGuest, false);
@@ -26,7 +22,22 @@ void UHotel_Event_Invader::Execute(UHotel_Manager* Manager, UEventInfo* EventInf
 
 	if (AHotel_Door* StaffDoor = Manager->GetStaffDoor())
 	{
-		StaffDoor->GetLockState() ? Manager->OnEventTriggerAction("StaffDoor_Lock") : Manager->OnEventTriggerAction("StaffDoor_Unlock");
+		if (StaffDoor->GetLockState())
+		{
+			Manager->OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::DoorStateChange,
+				{
+					{ EHotelTriggerKey::Place, TEXT("Staff") },
+					{ EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Lock) },
+				}));
+		}
+		else
+		{
+			Manager->OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::DoorStateChange,
+				{
+					{ EHotelTriggerKey::Place, TEXT("Staff") },
+					{ EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::UnLock) },
+				}));
+		}
 	}
 }
 
@@ -34,42 +45,66 @@ void UHotel_Event_Invader::TriggerInvade(UHotel_Manager* Manager)
 {
 	if (Manager)
 	{
-		Manager->OnEventTriggerAction("InvadeInvader");
+		Manager->OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::InvadeInvader));
 	}
 }
 
-bool UHotel_Event_Invader::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_Invader::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return false;
 
 	const FName WalkerLocation = Manager->GetWalkerLocation();
+	const FString* ReportTarget = Trigger.Payload.Find(EHotelTriggerKey::Target);
+	const FString* DoorPlace = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* DoorState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	const bool bSecurityReportLobby = (Trigger.Type == EHotelTriggerType::SecurityReport && ReportTarget && *ReportTarget == "Lobby");
+	const bool bStaffDoorOpen = (Trigger.Type == EHotelTriggerType::DoorStateChange
+		&& DoorPlace && DoorState
+		&& *DoorPlace == TEXT("Staff")
+		&& HotelTriggerStateEquals(DoorState, EHotelObjectState::Open));
+	const bool bStaffDoorLock = (Trigger.Type == EHotelTriggerType::DoorStateChange
+		&& DoorPlace && DoorState
+		&& *DoorPlace == TEXT("Staff")
+		&& HotelTriggerStateEquals(DoorState, EHotelObjectState::Lock));
+	const bool bStaffDoorUnlock = (Trigger.Type == EHotelTriggerType::DoorStateChange
+		&& DoorPlace && DoorState
+		&& *DoorPlace == TEXT("Staff")
+		&& HotelTriggerStateEquals(DoorState, EHotelObjectState::UnLock));
+	const bool bInvadeInvader = (Trigger.Type == EHotelTriggerType::InvadeInvader);
 
-	if (!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() == "InvadeInvader")
+	const bool bLastInvade = !EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last().Type == EHotelTriggerType::InvadeInvader;
+	const bool bLastStaffDoorUnlock = !EventInfo->CollectedTriggers.IsEmpty()
+		&& EventInfo->CollectedTriggers.Last().Type == EHotelTriggerType::DoorStateChange
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Place) == TEXT("Staff")
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::ObjectState) == HotelTriggerStateToString(EHotelObjectState::UnLock);
+	if (bLastInvade)
 	{
-		if (TriggerName == "SecurityReport_0")
+		if (bSecurityReportLobby)
 		{
 			EventInfo->EventGuest->TeleportTo(FVector(0, 1343, 94), FRotator(0, 0, 0), false, false);
 			EventInfo->EventGuest->DeactivateGuest();
-			EventInfo->CollectedTriggers.Add(TriggerName);
+			EventInfo->CollectedTriggers.Add(Trigger);
 			return true;
 		}
-		else if (WalkerLocation == "StaffRoom" || TriggerName == "StaffDoor_Open")
+		else if (WalkerLocation == "StaffRoom" || bStaffDoorOpen)
 		{
 			EventInfo->EventGuest->CatchingPlayer();
 		}
 	}
-	else if (TriggerName == "StaffDoor_Lock")
+	else if (bStaffDoorLock)
 	{
-		if (!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() == "InvadeInvader") return false;
-		Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
-		EventInfo->CollectedTriggers.Add(TriggerName);
+		if (bLastInvade) return false;
+		World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+		EventInfo->CollectedTriggers.Add(Trigger);
 	}
-	else if (TriggerName == "StaffDoor_Unlock")
+	else if (bStaffDoorUnlock)
 	{
-		if (!EventInfo->CollectedTriggers.IsEmpty() && (EventInfo->CollectedTriggers.Last() == "InvadeInvader" || EventInfo->CollectedTriggers.Last() == "StaffDoor_Unlock")) return false;
+		if (bLastInvade || bLastStaffDoorUnlock) return false;
 
 		TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
-		Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
+		World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
 			{
 				if (WeakManager.IsValid())
 				{
@@ -77,12 +112,12 @@ bool UHotel_Event_Invader::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 				}
 			}, FMath::RandRange(10, 15), false);
 
-		EventInfo->CollectedTriggers.Add(TriggerName);
+		EventInfo->CollectedTriggers.Add(Trigger);
 	}
-	else if (TriggerName == "InvadeInvader")
+	else if (bInvadeInvader)
 	{
 		Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
-		EventInfo->CollectedTriggers.Add(TriggerName);
+		EventInfo->CollectedTriggers.Add(Trigger);
 
 		if (AHotel_Door* StaffDoor = Manager->GetStaffDoor())
 		{

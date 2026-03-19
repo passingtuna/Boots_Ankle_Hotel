@@ -28,6 +28,6 @@ public:
 	bool bExecutingOnlyEvent = false;
 
 	virtual void Execute(UHotel_Manager* Manager, UEventInfo* EventInfo) PURE_VIRTUAL(UHotel_EventBase::Execute, );
-	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName) PURE_VIRTUAL(UHotel_EventBase::CheckClear, return false;);
+	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger) PURE_VIRTUAL(UHotel_EventBase::CheckClear, return false;);
 };
 

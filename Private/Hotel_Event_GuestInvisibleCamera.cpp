@@ -37,7 +37,7 @@ void UHotel_Event_GuestInvisibleCamera::Execute(UHotel_Manager* Manager, UEventI
 	}
 }
 
-bool UHotel_Event_GuestInvisibleCamera::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_GuestInvisibleCamera::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
 
@@ -45,7 +45,14 @@ bool UHotel_Event_GuestInvisibleCamera::CheckClear(UHotel_Manager* Manager, UEve
 	AHotel_Guest_Room* GuestRoom = EventInfo->EventGuest->GetAIController()->AssignedGuestRoom;
 	const FString RoomNumber = GuestRoom->RoomNumber.ToString();
 
-	if (FName(EventInfo->EventGuest->GuestName + "_In_" + RoomNumber) == TriggerName)
+	const FString* GuestNamePayload = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	const FString* PlacePayload = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* PlaceState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	if (Trigger.Type == EHotelTriggerType::PlaceStateChange
+		&& GuestNamePayload && PlacePayload
+		&& HotelTriggerStateEquals(PlaceState, EHotelObjectState::In)
+		&& *GuestNamePayload == EventInfo->EventGuest->GuestName
+		&& *PlacePayload == RoomNumber)
 	{
 		if (GuestRoom && GuestRoom->aDoor)
 		{
@@ -53,7 +60,12 @@ bool UHotel_Event_GuestInvisibleCamera::CheckClear(UHotel_Manager* Manager, UEve
 		}
 	}
 
-	if (FName(RoomNumber + "Door_OutPeepingEnd") == TriggerName)
+	const FString* PeepingRoom = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* PeepingState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	if (Trigger.Type == EHotelTriggerType::PeepingDoor
+		&& PeepingRoom && PeepingState
+		&& *PeepingRoom == RoomNumber
+		&& HotelTriggerStateEquals(PeepingState, EHotelObjectState::End))
 	{
 		if (GuestRoom && GuestRoom->aDoor)
 		{

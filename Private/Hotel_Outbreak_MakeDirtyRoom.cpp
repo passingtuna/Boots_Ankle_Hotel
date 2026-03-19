@@ -35,8 +35,11 @@ void UHotel_Outbreak_MakeDirtyRoom::Execute(UHotel_Manager* Manager, UEventInfo*
 	}
 }
 
-bool UHotel_Outbreak_MakeDirtyRoom::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Outbreak_MakeDirtyRoom::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
+	(void)Manager;
+	(void)EventInfo;
+	(void)Trigger;
 	return false;
 }
 

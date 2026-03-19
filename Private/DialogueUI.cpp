@@ -353,7 +353,14 @@ void UDialogueUI::RejectFullRooms()
 {
     if (IsValid(NowGuest))
     {
-        if (NowGuest->IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(NowGuest->GuestName + "_Reject_CheckIn"));
+        if (NowGuest->IsCheckTrigger)
+        {
+            Hotel_Manager->OnEventTriggerAction(
+                FHotelTrigger::Make(EHotelTriggerType::GuestOutHotel,
+                    {
+                        { EHotelTriggerKey::Instigator, NowGuest->GuestName },
+                    }));
+        }
         NowGuest->GuestExit();
     }
     EndDialogue();
@@ -365,7 +372,15 @@ void UDialogueUI::CheckIn()
     if (Hotel_Manager->CheckGuestRoom(temp)) //방에 이상없으면 체크인 하고 행동
     {
         Hotel_Manager->CheckInGuestRoom(NowGuest, temp);
-        if (NowGuest->IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(NowGuest->GuestName + "_CheckIn_" + temp.ToString()));
+        if (NowGuest->IsCheckTrigger)
+        {
+            Hotel_Manager->OnEventTriggerAction(
+                FHotelTrigger::Make(EHotelTriggerType::GuestCheckIn,
+                    {
+                        { EHotelTriggerKey::Instigator, NowGuest->GuestName },
+                        { EHotelTriggerKey::RoomNumber, temp.ToString() }
+                    }));
+        }
         EndDialogue();
     }
     else //방에 이상이 있다면 현재 다이얼로그 재실행
@@ -432,9 +447,12 @@ void UDialogueUI::SetNextDialogueIndex(int index)
 
 void UDialogueUI::SecurityReport()
 {
-    FString temp = "SecurityReport_";
-    temp += *FString::FromInt(NowFunctionParameter);
-    if (Hotel_Manager->OnEventTriggerAction(FName(temp)))   //발동된 트리거가 있을시 정확한 신고 
+    const FString ReportTarget = (NowFunctionParameter == 0)
+        ? TEXT("Lobby")
+        : FString::FromInt(NowFunctionParameter);
+
+    if (Hotel_Manager->OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::SecurityReport,
+        { { EHotelTriggerKey::Target, ReportTarget } })))   //발동된 트리거가 있을시 정확한 신고 
     {
         SetNextDialogueIndex(1);
         DisconnectCalling();

@@ -15,6 +15,8 @@ UHotel_Outbreak_ComplainRoomDirty::UHotel_Outbreak_ComplainRoomDirty()
 void UHotel_Outbreak_ComplainRoomDirty::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return;
 
 	EventInfo->isAreadyExcute = true;
 	EventInfo->EventGuest->AddDialogueDataState(TEXT("방 청소 상태에 관하여"), EDialogueState::DS_Guest_ComplainRoomCondition, 0);
@@ -22,7 +24,7 @@ void UHotel_Outbreak_ComplainRoomDirty::Execute(UHotel_Manager* Manager, UEventI
 	EventInfo->EventGuest->IsCalledWalker = true;
 
 	TWeakObjectPtr<AHotel_Guest> WeakGuest(EventInfo->EventGuest);
-	Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakGuest]()
+	World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakGuest]()
 		{
 			if (!WeakGuest.IsValid()) return;
 			AAI_Hotel_Guest_Default* AI = WeakGuest->GetAIController();
@@ -33,15 +35,17 @@ void UHotel_Outbreak_ComplainRoomDirty::Execute(UHotel_Manager* Manager, UEventI
 		}, 2.0f, false);
 }
 
-bool UHotel_Outbreak_ComplainRoomDirty::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Outbreak_ComplainRoomDirty::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!EventInfo || !IsValid(EventInfo->EventGuest) || !EventInfo->EventGuest->GetAIController() || !EventInfo->EventGuest->GetAIController()->AssignedGuestRoom)
 	{
 		return false;
 	}
 
-	const FString RoomNumber = EventInfo->EventGuest->GetAIController()->AssignedGuestRoom->RoomNumber.ToString();
-	if (TriggerName == FName(RoomNumber + "_Clean"))
+	const FString RoomPlace = EventInfo->EventGuest->GetAIController()->AssignedGuestRoom->RoomNumber.ToString();
+	const FString* CleanPlace = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	if (Trigger.Type == EHotelTriggerType::RoomCleaned
+		&& CleanPlace && *CleanPlace == RoomPlace)
 	{
 		if (!EventInfo->EventGuest->GetAIController()->AssignedGuestRoom->CheckRoomDirty())
 		{
