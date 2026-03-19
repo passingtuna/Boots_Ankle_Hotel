@@ -63,8 +63,6 @@ void AHotel_Phone::TryCalling(FName PhoneNum)
 
 void AHotel_Phone::RingingTimeOver()
 {
-    UE_LOG(LogTemp, Warning, TEXT("링 오버 타임 : %s"), *RegistPhoneNumber.ToString());
-
     if (IsValid(aConnectedPhone))
     {
         aConnectedPhone->ConnectFail();

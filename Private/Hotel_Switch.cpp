@@ -32,9 +32,14 @@ void  AHotel_Switch::SetSwitchToggle()
 
     comSwitchButton->SetRelativeRotation(FRotator(0, 0, (180 * isSwitchOn)));
 
-    FString temp = SwitchName.ToString() + "_Switch_" + (isSwitchOn ? "On" : "Off");
-
-    Hotel_Manager->OnEventTriggerAction("");
+    // 모든 스위치 토글을 enum + payload로 전달
+    Hotel_Manager->OnEventTriggerAction(
+        FHotelTrigger::Make(
+            EHotelTriggerType::SwitchStateChange,
+            {
+                { EHotelTriggerKey::Place, SwitchName.ToString() },
+                    { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(isSwitchOn ? EHotelObjectState::On : EHotelObjectState::Off) },
+            }));
     for (const auto& targetLight : arrConnectedLight)
     {
         targetLight->SetSwitchAction(isSwitchOn);// TurnLight(isSwitchOn);

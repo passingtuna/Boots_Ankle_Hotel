@@ -190,11 +190,23 @@ void AHotel_Guest::Tick(float DeltaTime)
         {
             if (bIsLookingAtGuest)
             {
-                Hotel_Manager->OnEventTriggerAction("LookAtGuest");
+                Hotel_Manager->OnEventTriggerAction(
+                    FHotelTrigger::Make(EHotelTriggerType::LookStateChange,
+                        {
+                            { EHotelTriggerKey::Instigator, TEXT("Walker") },
+                            { EHotelTriggerKey::Target, GuestName },
+                            { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Look) },
+                        }));
             }
             else
             {
-                Hotel_Manager->OnEventTriggerAction("NoLookAtGuest");
+                Hotel_Manager->OnEventTriggerAction(
+                    FHotelTrigger::Make(EHotelTriggerType::LookStateChange,
+                        {
+                            { EHotelTriggerKey::Instigator, TEXT("Walker") },
+                            { EHotelTriggerKey::Target, GuestName },
+                            { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::NoLook) },
+                        }));
             }
 
             bWasLookingAtGuest = bIsLookingAtGuest;
@@ -444,7 +456,14 @@ void AHotel_Guest::SetHangingState(bool state)
     if (state)
     {
         IsHanging = true;
-        if (IsCheckTrigger)Hotel_Manager->OnEventTriggerAction(FName(GuestName + "_HangingNeck"));
+        if (IsCheckTrigger)
+        {
+            Hotel_Manager->OnEventTriggerAction(
+                FHotelTrigger::Make(EHotelTriggerType::GuestHangingNeck,
+                    {
+                        { EHotelTriggerKey::Instigator, GuestName },
+                    }));
+        }
         if (AIController)AIController->StopMovement();
         if (IsValid(BedyAnimInstance))
         {

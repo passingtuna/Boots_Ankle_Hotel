@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Hotel_Place.h"
 #include "Hotel_Walker.h"
 #include "Hotel_Guest_Room.h"
@@ -10,10 +7,8 @@
 #include "Hotel_CCTV_Camera.h"
 #include "Components/BoxComponent.h"
 
-// Sets default values
 AHotel_Place::AHotel_Place()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
     PlaceVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerBox"));
@@ -26,7 +21,6 @@ AHotel_Place::AHotel_Place()
     PlaceVolume->SetGenerateOverlapEvents(true);
 }
 
-// Called when the game starts or when spawned
 void AHotel_Place::BeginPlay()
 {
 	Super::BeginPlay();
@@ -39,7 +33,6 @@ void AHotel_Place::BeginPlay()
     }
 }
 
-// Called every frame
 void AHotel_Place::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -62,20 +55,30 @@ void AHotel_Place::PersonOutPlace(UPrimitiveComponent* OverlappedComp, AActor* O
 {
     if (IsValid(ParentPlace))
     {
-        ParentPlace->SetOverlappingPerson(OtherActor); //
+        ParentPlace->SetOverlappingPerson(OtherActor);
     }
     if (OtherActor->IsA<AHotel_Walker>())
     {
-        FString tempString = "Walker_Out_" + PlaceName.ToString();
-        GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(FName(tempString));
+        GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(
+            FHotelTrigger::Make(EHotelTriggerType::PlaceStateChange,
+                {
+                    { EHotelTriggerKey::Instigator, TEXT("Walker") },
+                    { EHotelTriggerKey::Place, PlaceName.ToString() },
+                    { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Out) },
+                }));
     }
     else if (OtherActor->IsA<AHotel_Guest>())
     {
         AHotel_Guest* tempGuest = Cast<AHotel_Guest>(OtherActor);
         if (tempGuest->IsCheckTrigger)
         {
-            FString tempString = tempGuest->GuestName + "_Out_" + PlaceName.ToString();
-            GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(FName(tempString));
+            GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(
+                FHotelTrigger::Make(EHotelTriggerType::PlaceStateChange,
+                    {
+                        { EHotelTriggerKey::Instigator, tempGuest->GuestName },
+                        { EHotelTriggerKey::Place, PlaceName.ToString() },
+                        { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Out) },
+                    }));
         }
     }
 }
@@ -92,8 +95,13 @@ void AHotel_Place::SetOverlappingPerson(AActor* OtherActor)
         AHotel_Guest* tempGuest = Cast<AHotel_Guest>(OtherActor);
         if (tempGuest->IsCheckTrigger)
         {
-            FString tempString = tempGuest->GuestName + "_In_" + PlaceName.ToString();
-            GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(FName(tempString));
+            GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->OnEventTriggerAction(
+                FHotelTrigger::Make(EHotelTriggerType::PlaceStateChange,
+                    {
+                        { EHotelTriggerKey::Instigator, tempGuest->GuestName },
+                        { EHotelTriggerKey::Place, PlaceName.ToString() },
+                        { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::In) },
+                    }));
         }
     }
     else if (OtherActor->IsA<AHotel_Walker>())

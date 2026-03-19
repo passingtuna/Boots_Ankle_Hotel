@@ -20,7 +20,12 @@ void AHotel_Cleanable_Object::CleanObject()
     Mesh->SetMaterial(0,NULL);
     PlaySound("Clean");
     isClean = true;
-    Hotel_Manager->OnEventTriggerAction(FName(RoomNumber.ToString() +  "_Clean"));
+    Hotel_Manager->OnEventTriggerAction(
+        FHotelTrigger::Make(
+            EHotelTriggerType::RoomCleaned,
+            {
+                { EHotelTriggerKey::Place, RoomNumber.ToString() },
+            }));
 }
 
 void AHotel_Cleanable_Object::DirtObject()

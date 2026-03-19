@@ -35,8 +35,13 @@ int AHotel_CCTV::FindNextCameraIndex(bool Next)
         temp = (temp + Cal + arrCameras.Num()) % arrCameras.Num();
         if (IsValid(arrCameras[temp])) //현재 켜져있는 카메라만 서칭
         {
-            FString trigger = "ViewCCTV_" + arrCameras[temp]->CameraName.ToString();
-            Hotel_Manager->OnEventTriggerAction(FName(trigger));
+            Hotel_Manager->OnEventTriggerAction(
+                FHotelTrigger::Make(
+                    EHotelTriggerType::CCTVStateChange,
+                    {
+                        { EHotelTriggerKey::Place, arrCameras[temp]->CameraName.ToString() },
+                        { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::View) },
+                    }));
             return temp;
         }
     }

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Hotel_Event_Open205.h"
 
 #include "Hotel_Guest.h"
@@ -30,8 +28,8 @@ void UHotel_Event_Open205::Fail205(UHotel_Manager* Manager)
 void UHotel_Event_Open205::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("205호 등장"));
+	UWorld* World = Manager->GetWorld();
+	if (!World) return;
 	EventInfo->isAreadyExcute = true;
 
 	if (UHotel_StaticMesh* Mesh = Manager->GetHotelMeshByName("205Wall"))
@@ -46,7 +44,7 @@ void UHotel_Event_Open205::Execute(UHotel_Manager* Manager, UEventInfo* EventInf
 			Manager->ActivateGuest(EventInfo->EventGuest, false);
 
 			TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
-			Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
+			World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager]()
 				{
 					if (WeakManager.IsValid())
 					{
@@ -61,11 +59,38 @@ void UHotel_Event_Open205::Execute(UHotel_Manager* Manager, UEventInfo* EventInf
 	}
 }
 
-bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo) return false;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return false;
+	const FString* Place = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* Instigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	const FString* PlaceState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	const FString* Target = Trigger.Payload.Find(EHotelTriggerKey::Target);
+	const bool bEnter205 = (Trigger.Type == EHotelTriggerType::PlaceStateChange
+		&& Instigator && PlaceState && Place
+		&& *Instigator == TEXT("Walker")
+		&& HotelTriggerStateEquals(PlaceState, EHotelObjectState::In)
+		&& *Place == "205");
+	const bool bTryCall205To205 = (Trigger.Type == EHotelTriggerType::TryCall && Place && Target && *Place == "205" && *Target == "205");
+	const bool bEnter2F = (Trigger.Type == EHotelTriggerType::PlaceStateChange
+		&& Instigator && PlaceState && Place
+		&& *Instigator == TEXT("Walker")
+		&& HotelTriggerStateEquals(PlaceState, EHotelObjectState::In)
+		&& *Place == "2F");
+	const bool bGameEnd = (Trigger.Type == EHotelTriggerType::GameEnd);
+	const bool bLastEnter205 = !EventInfo->CollectedTriggers.IsEmpty()
+		&& EventInfo->CollectedTriggers.Last().Type == EHotelTriggerType::PlaceStateChange
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Instigator) == TEXT("Walker")
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::ObjectState) == HotelTriggerStateToString(EHotelObjectState::In)
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Place) == "205";
+	const bool bLastTryCall205To205 = !EventInfo->CollectedTriggers.IsEmpty()
+		&& EventInfo->CollectedTriggers.Last().Type == EHotelTriggerType::TryCall
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Place) == "205"
+		&& EventInfo->CollectedTriggers.Last().Payload.FindRef(EHotelTriggerKey::Target) == "205";
 
-	if (TriggerName == "Walker_Enter_205")
+	if (bEnter205)
 	{
 		if (UHotel_StaticMesh* Mesh = Manager->GetHotelMeshByName("205Wall"))
 		{
@@ -82,10 +107,10 @@ bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 		}
 
 		Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
-		EventInfo->CollectedTriggers.Add(TriggerName);
-		Manager->GetWorld()->GetTimerManager().ClearTimer(EventInfo->EventTimer);
+		EventInfo->CollectedTriggers.Add(Trigger);
+		World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 	}
-	else if (TriggerName == "WalkerTryCall_205_To_205" && !EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() == "Walker_Enter_205")
+	else if (bTryCall205To205 && bLastEnter205)
 	{
 		if (UHotel_StaticMesh* Mesh = Manager->GetHotelMeshByName("205Wall"))
 		{
@@ -99,9 +124,9 @@ bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 				RoomInfo->Room->aDoor->SetOpenDoor(true);
 			}
 		}
-		EventInfo->CollectedTriggers.Add(TriggerName);
+		EventInfo->CollectedTriggers.Add(Trigger);
 	}
-	else if (TriggerName == "Walker_Enter_2F" && !EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last() == "WalkerTryCall_205_To_205")
+	else if (bEnter2F && bLastTryCall205To205)
 	{
 		if (UHotel_StaticMesh* Mesh = Manager->GetHotelMeshByName("205Wall"))
 		{
@@ -117,7 +142,7 @@ bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 		}
 		return true;
 	}
-	else if (TriggerName == "GameEnd")
+	else if (bGameEnd)
 	{
 		Fail205(Manager);
 	}

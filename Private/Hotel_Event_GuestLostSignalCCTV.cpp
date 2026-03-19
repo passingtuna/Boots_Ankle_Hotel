@@ -17,8 +17,6 @@ UHotel_Event_GuestLostSignalCCTV::UHotel_Event_GuestLostSignalCCTV()
 void UHotel_Event_GuestLostSignalCCTV::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("로스트 시그널 게스트"));
 	EventInfo->isAreadyExcute = true;
 
 	Manager->ActivateGuest(EventInfo->EventGuest, true);
@@ -30,28 +28,26 @@ void UHotel_Event_GuestLostSignalCCTV::Execute(UHotel_Manager* Manager, UEventIn
 	Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
 }
 
-bool UHotel_Event_GuestLostSignalCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Event_GuestLostSignalCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
 	AHotel_CCTV* CCTV = Manager->GetCCTV();
 	if (!CCTV) return false;
 
-	TArray<FString> Parts;
-	TriggerName.ToString().ParseIntoArray(Parts, TEXT("_"), true);
-	if (Parts.Num() < 3) return false;
+	const FString* Instigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	const FString* Place = Trigger.Payload.Find(EHotelTriggerKey::Place);
+	const FString* PlaceState = Trigger.Payload.Find(EHotelTriggerKey::ObjectState);
+	if (!Instigator || !Place || EventInfo->EventGuest->GuestName != *Instigator) return false;
 
-	if (EventInfo->EventGuest->GuestName != Parts[0]) return false;
+	const int CameraNum = CCTV->FindCameraNumByName(FName(**Place));
+	if (CameraNum == -1) return false;
 
-	if (Parts[1] == "In")
+	if (Trigger.Type == EHotelTriggerType::PlaceStateChange && HotelTriggerStateEquals(PlaceState, EHotelObjectState::In))
 	{
-		const int CameraNum = CCTV->FindCameraNumByName(FName(Parts[2]));
-		if (CameraNum == -1) return false;
 		CCTV->SetPostProcessCamera(CameraNum, 3, true);
 	}
-	else if (Parts[1] == "Out")
+	else if (Trigger.Type == EHotelTriggerType::PlaceStateChange && HotelTriggerStateEquals(PlaceState, EHotelObjectState::Out))
 	{
-		const int CameraNum = CCTV->FindCameraNumByName(FName(Parts[2]));
-		if (CameraNum == -1) return false;
 		CCTV->SetPostProcessCamera(CameraNum, 3, false);
 	}
 

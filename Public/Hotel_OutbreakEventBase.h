@@ -20,6 +20,6 @@ public:
 
 	// 아웃브레이크는 메뉴얼에 표시되는 ID가 0인 경우가 많아서 여기선 EventID를 따로 두지 않습니다.
 	virtual void Execute(UHotel_Manager* Manager, UEventInfo* EventInfo) PURE_VIRTUAL(UHotel_OutbreakEventBase::Execute, );
-	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName) PURE_VIRTUAL(UHotel_OutbreakEventBase::CheckClear, return false;);
+	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger) PURE_VIRTUAL(UHotel_OutbreakEventBase::CheckClear, return false;);
 };
 

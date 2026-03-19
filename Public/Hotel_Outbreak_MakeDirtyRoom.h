@@ -15,6 +15,6 @@ public:
 	UHotel_Outbreak_MakeDirtyRoom();
 
 	virtual void Execute(UHotel_Manager* Manager, UEventInfo* EventInfo) override;
-	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName) override;
+	virtual bool CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger) override;
 };
 

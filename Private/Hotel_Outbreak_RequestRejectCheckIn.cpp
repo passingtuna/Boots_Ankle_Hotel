@@ -14,12 +14,14 @@ UHotel_Outbreak_RequestRejectCheckIn::UHotel_Outbreak_RequestRejectCheckIn()
 void UHotel_Outbreak_RequestRejectCheckIn::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return;
 
 	EventInfo->isAreadyExcute = true;
 
 	TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
 	TWeakObjectPtr<UEventInfo> WeakEvent(EventInfo);
-	Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
+	World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
 		{
 			if (!WeakManager.IsValid() || !WeakEvent.IsValid()) return;
 			AHotel_Operator* Op = WeakManager->GetDepartmentOperator();
@@ -31,17 +33,14 @@ void UHotel_Outbreak_RequestRejectCheckIn::Execute(UHotel_Manager* Manager, UEve
 		}, FMath::RandRange(2, 8), false);
 }
 
-bool UHotel_Outbreak_RequestRejectCheckIn::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Outbreak_RequestRejectCheckIn::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
 	if (!Manager || !EventInfo || !IsValid(EventInfo->EventGuest)) return false;
 
-	TArray<FString> Parts;
-	TriggerName.ToString().ParseIntoArray(Parts, TEXT("_"), true);
-	if (Parts.Num() < 2) return false;
+	const FString* Instigator = Trigger.Payload.Find(EHotelTriggerKey::Instigator);
+	if (!Instigator || *Instigator != EventInfo->EventGuest->GuestName) return false;
 
-	if (Parts[0] != EventInfo->EventGuest->GuestName) return false;
-
-	if (Parts[1] == "CheckIn")
+	if (Trigger.Type == EHotelTriggerType::GuestCheckIn)
 	{
 		Manager->MinusHRScore(20, TEXT("지시 불이행"));
 
@@ -52,7 +51,7 @@ bool UHotel_Outbreak_RequestRejectCheckIn::CheckClear(UHotel_Manager* Manager, U
 		}
 		return true;
 	}
-	else if (Parts[1] == "OutHotel")
+	else if (Trigger.Type == EHotelTriggerType::GuestOutHotel)
 	{
 		return true;
 	}

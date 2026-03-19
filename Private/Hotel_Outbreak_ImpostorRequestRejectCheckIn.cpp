@@ -14,10 +14,12 @@ UHotel_Outbreak_ImpostorRequestRejectCheckIn::UHotel_Outbreak_ImpostorRequestRej
 void UHotel_Outbreak_ImpostorRequestRejectCheckIn::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)
 {
 	if (!Manager || !EventInfo) return;
+	UWorld* World = Manager->GetWorld();
+	if (!World) return;
 
 	TWeakObjectPtr<UHotel_Manager> WeakManager(Manager);
 	TWeakObjectPtr<UEventInfo> WeakEvent(EventInfo);
-	Manager->GetWorld()->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
+	World->GetTimerManager().SetTimer(EventInfo->EventTimer, [WeakManager, WeakEvent]()
 		{
 			if (!WeakManager.IsValid() || !WeakEvent.IsValid()) return;
 			AHotel_Operator* Op = WeakManager->GetDepartmentOperator();
@@ -29,8 +31,11 @@ void UHotel_Outbreak_ImpostorRequestRejectCheckIn::Execute(UHotel_Manager* Manag
 		}, FMath::RandRange(2, 8), false);
 }
 
-bool UHotel_Outbreak_ImpostorRequestRejectCheckIn::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, FName TriggerName)
+bool UHotel_Outbreak_ImpostorRequestRejectCheckIn::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
 {
+	(void)Manager;
+	(void)EventInfo;
+	(void)Trigger;
 	return false;
 }
 

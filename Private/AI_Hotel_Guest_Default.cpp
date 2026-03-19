@@ -191,7 +191,14 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                     break;
                 case AS_OutSide:
                     {
-                        if (Hotel_Guest->IsCheckTrigger) Hotel_Manager->OnEventTriggerAction(FName(Hotel_Guest->GuestName + "_OutHotel"));
+                        if (Hotel_Guest->IsCheckTrigger)
+                        {
+                            Hotel_Manager->OnEventTriggerAction(
+                                FHotelTrigger::Make(EHotelTriggerType::GuestOutHotel,
+                                    {
+                                        { EHotelTriggerKey::Instigator, Hotel_Guest->GuestName },
+                                    }));
+                        }
                         Hotel_Manager->GuestOutHotel(Hotel_Guest); //실행중 이벤트에서 빼고
                         Hotel_Guest->CheckOutGuest();//체크인된 방이 있다면 체크아웃
                         Hotel_Guest->DeactivateGuest();
