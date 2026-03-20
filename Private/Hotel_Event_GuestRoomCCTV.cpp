@@ -104,7 +104,7 @@ bool UHotel_Event_GuestRoomCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo*
 				World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 				EventInfo->CollectedTriggers.Add(Trigger);
 				EventInfo->EventGuest->SetLookingCameraStatue(EventInfo->CollectedTriggers.Num(), GuestRoom->aCCTV_Camera);
-				Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+				Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 			}
 		}
 		else if (Trigger.Type == EHotelTriggerType::CCTVStateChange)

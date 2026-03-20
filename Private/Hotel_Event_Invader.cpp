@@ -116,7 +116,7 @@ bool UHotel_Event_Invader::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 	}
 	else if (bInvadeInvader)
 	{
-		Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+		Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 		EventInfo->CollectedTriggers.Add(Trigger);
 
 		if (AHotel_Door* StaffDoor = Manager->GetStaffDoor())

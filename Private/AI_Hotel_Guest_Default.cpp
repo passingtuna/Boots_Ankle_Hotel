@@ -153,7 +153,12 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                         Hotel_Guest->SetLookingPlayer(true);
                         if (Hotel_Manager->GetWalkerLocation() == "Counter") //
                         {
-                            GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); }, 15 , false);
+                            TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+                            GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [WeakThis]()
+                                {
+                                    if (!WeakThis.IsValid()) return;
+                                    WeakThis->DecreasePatienceCount(true);
+                                }, 15, false);
                         }
                         else
                         {
@@ -181,9 +186,12 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
                         {
                             AssignedGuestRoom->aDoor->SetOpenDoor(false);
                             AssignedGuestRoom->aDoor->SetLockDoor(true);
-                            GetWorld()->GetTimerManager().SetTimer(Timer_AI, [this]() {
-                                Hotel_Guest->ReadyToMove();
-                                GoToRoom();
+                            TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+                            GetWorld()->GetTimerManager().SetTimer(Timer_AI, [WeakThis]()
+                                {
+                                    if (!WeakThis.IsValid() || !IsValid(WeakThis->Hotel_Guest)) return;
+                                    WeakThis->Hotel_Guest->ReadyToMove();
+                                    WeakThis->GoToRoom();
                                 }, 1.0f, false);
 
                         }
@@ -212,28 +220,30 @@ void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, co
             {
                 ResultStr = TEXT("Blocked (Path interrupted or obstacle)");
 
-                GetWorld()->GetTimerManager().SetTimer(Timer_AI, [this]()
+                TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+                GetWorld()->GetTimerManager().SetTimer(Timer_AI, [WeakThis]()
                     {
-                        switch (MoveSuccessState)
+                        if (!WeakThis.IsValid()) return;
+                        switch (WeakThis->MoveSuccessState)
                         {
                             case AS_EndMoveCounter:
                             {
-                                GoToCounter();
+                                WeakThis->GoToCounter();
                             }
                             break;
                             case AS_EndMoveRoom:
                             {
-                                GoToRoom();
+                                WeakThis->GoToRoom();
                             }
                             break;
                             case AS_EndHearingKnock:
                             {
-                                GoToRoomDoor();
+                                WeakThis->GoToRoomDoor();
                             }
                             break;
                             case AS_LockingDoor:
                             {
-                                GoToRoomDoor();
+                                WeakThis->GoToRoomDoor();
                             }
                             break;
                             default:
@@ -310,9 +320,11 @@ void AAI_Hotel_Guest_Default::DecreasePatienceCount(bool Looping)
 
     if (Looping)
     {
-        GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() 
+        TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+        GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [WeakThis]() 
             {
-                DecreasePatienceCount(true); 
+                if (!WeakThis.IsValid()) return;
+                WeakThis->DecreasePatienceCount(true); 
             }, 15, false);
     }
 }
@@ -328,11 +340,13 @@ void AAI_Hotel_Guest_Default::CloseRoomDoor(float time)
 {
     if (IsValid(AssignedGuestRoom) && AssignedGuestRoom->aDoor->GetOpenState())
     {
-        GetWorld()->GetTimerManager().SetTimer(Timer_AI, [this]() {
-            Hotel_Guest->ReadyToMove();
-            Hotel_Guest->SetAutoActionDoor(false);
-            GoToRoomDoor();
-            MoveSuccessState = AS_LockingDoor;
+        TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+        GetWorld()->GetTimerManager().SetTimer(Timer_AI, [WeakThis]() {
+            if (!WeakThis.IsValid() || !IsValid(WeakThis->Hotel_Guest)) return;
+            WeakThis->Hotel_Guest->ReadyToMove();
+            WeakThis->Hotel_Guest->SetAutoActionDoor(false);
+            WeakThis->GoToRoomDoor();
+            WeakThis->MoveSuccessState = AS_LockingDoor;
             }, time, false);
     }
     else
@@ -343,7 +357,11 @@ void AAI_Hotel_Guest_Default::CloseRoomDoor(float time)
 void AAI_Hotel_Guest_Default::RingingBell()
 {
     Hotel_Manager->RingingBell();
-    GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [this]() {DecreasePatienceCount(true); },15, false);
+    TWeakObjectPtr<AAI_Hotel_Guest_Default> WeakThis(this);
+    GetWorld()->GetTimerManager().SetTimer(Timer_Patience, [WeakThis]() {
+        if (!WeakThis.IsValid()) return;
+        WeakThis->DecreasePatienceCount(true);
+        }, 15, false);
 }
 
 void AAI_Hotel_Guest_Default::StopPatienceTimer()

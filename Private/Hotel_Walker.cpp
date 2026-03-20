@@ -34,12 +34,16 @@
 void AHotel_Walker::BeginPlay()
 {
 	Super::BeginPlay();
+    // 위젯 생성/입력 기반 처리에 필요하므로 BeginPlay에서 먼저 확보합니다.
+    PlayerController = Cast<APlayerController>(GetController());
+
     //AdudioComp
     isRun = false;
     FollowCamera = FindComponentByClass<UCameraComponent>();
     CaptureComp = FindComponentByClass<USceneCaptureComponent2D>();
     if (InteractiveBoxWidgetClass)
     {
+        if (!PlayerController) { return; }
         Interactive_Box = CreateWidget<UInteractive_Box>(PlayerController, InteractiveBoxWidgetClass);
         if (Interactive_Box)
         {
@@ -51,6 +55,7 @@ void AHotel_Walker::BeginPlay()
 
     if (CrosshairWidgetClass)
     {
+        if (!PlayerController) { return; }
         Crosshair = CreateWidget<UUserWidget>(PlayerController, CrosshairWidgetClass);
         if (Crosshair)
         {
@@ -61,6 +66,7 @@ void AHotel_Walker::BeginPlay()
 
     if (InteractiveWidgetClass)
     {
+        if (!PlayerController) { return; }
         InteractiveWidget = CreateWidget<UUserWidget>(PlayerController, InteractiveWidgetClass);
         if (InteractiveWidget)
         {
@@ -71,6 +77,7 @@ void AHotel_Walker::BeginPlay()
 
     if (PhoneUiWidgetClass)
     {
+        if (!PlayerController) { return; }
         PhoneUi = CreateWidget<UPhoneDialUI>(PlayerController, PhoneUiWidgetClass);
         if (PhoneUi)
         {
@@ -81,6 +88,7 @@ void AHotel_Walker::BeginPlay()
 
     if (MenualUiWidgetClass)
     {
+        if (!PlayerController) { return; }
         MenualUi = CreateWidget<UMenualUI>(PlayerController, MenualUiWidgetClass);
         if (MenualUi)
         {
@@ -91,6 +99,7 @@ void AHotel_Walker::BeginPlay()
 
     if (DialogueUiWidgetClass)
     {
+        if (!PlayerController) { return; }
         DialogueUi = CreateWidget<UDialogueUI>(PlayerController, DialogueUiWidgetClass);
         if (DialogueUi)
         {
@@ -143,19 +152,25 @@ void AHotel_Walker::Tick(float DeltaTime)
         }
         else
         {
-            GetWorld()->GetTimerManager().SetTimer(FootStepTimer, this, &AHotel_Walker::StopMovingSound, 0.2f, false);
+            if (!GetWorld()->GetTimerManager().IsTimerActive(FootStepTimer))
+            {
+                GetWorld()->GetTimerManager().SetTimer(FootStepTimer, this, &AHotel_Walker::StopMovingSound, 0.2f, false);
+            }
             GetMouseControl();
             isEnteringHotel = false;
         }
         return;
     }
     
-    if (isPeeping || PlayerController->bShowMouseCursor || isCatchNeck)
+    if (isPeeping || isCatchNeck || (PlayerController && PlayerController->bShowMouseCursor))
     {
         if (interactObject)
         {
             interactObject->SetHighLightInteractive(false);
-            InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+            if (InteractiveWidget)
+            {
+                InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+            }
         }
         return;
     }
@@ -182,8 +197,11 @@ void AHotel_Walker::Tick(float DeltaTime)
         if (interactObject)
         {
             interactObject->SetHighLightInteractive(false);
-            InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
-            interactObject = NULL;
+                if (InteractiveWidget)
+                {
+                    InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+                }
+                interactObject = NULL;
         }
         if (isHit)
         {
@@ -208,7 +226,10 @@ void AHotel_Walker::Tick(float DeltaTime)
                 if (interactObject)
                 {
                     interactObject->SetHighLightInteractive(false);
-                    InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+                    if (InteractiveWidget)
+                    {
+                        InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+                    }
                     interactObject = NULL;
                 }
             }
@@ -331,10 +352,16 @@ void AHotel_Walker::Move(const FInputActionValue& Value)
 void AHotel_Walker::StopPeeping()
 {
     if (!isPeeping) return;
-    PlayerController->SetViewTargetWithBlend(this);
+    if (PlayerController)
+    {
+        PlayerController->SetViewTargetWithBlend(this);
+    }
     isPeeping = false;
-    PeepingCamera->PeepingEnd();
-    PeepingCamera = NULL;
+    if (PeepingCamera)
+    {
+        PeepingCamera->PeepingEnd();
+        PeepingCamera = nullptr;
+    }
 }
 
 void AHotel_Walker::Look(const FInputActionValue& Value)

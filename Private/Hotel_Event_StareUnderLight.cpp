@@ -115,7 +115,7 @@ bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInf
 		{
 			EventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0), false, false);
 			EventInfo->EventGuest->DeactivateGuest();
-			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+			Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 			return true;
 		}
 
@@ -177,7 +177,7 @@ bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInf
 		break;
 		case 12:
 			EventInfo->EventGuest->CatchingPlayer();
-			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+			Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 			if (AHotel_Place* Lobby = Manager->GetPlaceByName("Lobby"))
 			{
 				if (IsValid(Lobby) && IsValid(Lobby->PlaceSwtich))

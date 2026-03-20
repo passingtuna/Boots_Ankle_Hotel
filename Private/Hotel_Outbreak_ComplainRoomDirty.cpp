@@ -10,6 +10,9 @@
 UHotel_Outbreak_ComplainRoomDirty::UHotel_Outbreak_ComplainRoomDirty()
 {
 	OutbreakId = EHotelOutbreakEventId::ComplainRoomDirty;
+	ExecuteTiming = FET_Init;
+	bEventOnlyOnce = false;
+	bExecutingOnlyEvent = false;
 }
 
 void UHotel_Outbreak_ComplainRoomDirty::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)

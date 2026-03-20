@@ -29,7 +29,7 @@ void UHotel_Event_GuestInvisibleCamera::Execute(UHotel_Manager* Manager, UEventI
 		EventInfo->EventGuest->IsCheckTrigger = true;
 	}
 
-	Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+	Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 
 	if (AHotel_CCTV* CCTV = Manager->GetCCTV())
 	{

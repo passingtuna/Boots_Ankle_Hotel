@@ -68,30 +68,13 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
 
     if (EventObjects.IsEmpty())
     {
-        // 이벤트 클래스 등록 (기존 시스템은 유지하고, 내부 로직만 클래스로 분리)
-        UHotel_Event_Invader* Invader = NewObject<UHotel_Event_Invader>(this);
-        EventObjects.Add(Invader);
-
-        UHotel_Event_StareUnderLight* Stare = NewObject<UHotel_Event_StareUnderLight>(this);
-        EventObjects.Add(Stare);
-
+        EventObjects.Add(NewObject<UHotel_Event_Invader>(this));
+        EventObjects.Add(NewObject<UHotel_Event_StareUnderLight>(this));
         EventObjects.Add(NewObject<UHotel_Event_GuestRoomCCTV>(this));
         EventObjects.Add(NewObject<UHotel_Event_GuestHanging>(this));
         EventObjects.Add(NewObject<UHotel_Event_Open205>(this));
         EventObjects.Add(NewObject<UHotel_Event_GuestLostSignalCCTV>(this));
         EventObjects.Add(NewObject<UHotel_Event_GuestInvisibleCamera>(this));
-    }
-
-    if (EventById.IsEmpty() && !EventObjects.IsEmpty())
-    {
-        for (UHotel_EventBase* Evt : EventObjects)
-        {
-            if (!Evt) continue;
-            if (Evt->EventID != EHotelEventId::None)
-            {
-                EventById.Add(Evt->EventID, Evt);
-            }
-        }
     }
 
     if (OutbreakEventObjects.IsEmpty())
@@ -101,18 +84,6 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
         OutbreakEventObjects.Add(NewObject<UHotel_Outbreak_AllocateRoomGuest>(this));
         OutbreakEventObjects.Add(NewObject<UHotel_Outbreak_MakeDirtyRoom>(this));
         OutbreakEventObjects.Add(NewObject<UHotel_Outbreak_ImpostorRequestRejectCheckIn>(this));
-    }
-
-    if (OutbreakById.IsEmpty() && !OutbreakEventObjects.IsEmpty())
-    {
-        for (UHotel_OutbreakEventBase* Evt : OutbreakEventObjects)
-        {
-            if (!Evt) continue;
-            if (Evt->OutbreakId != EHotelOutbreakEventId::None)
-            {
-                OutbreakById.Add(Evt->OutbreakId, Evt);
-            }
-        }
     }
 
     TArray<FPrimaryAssetId> AssetIDs;
@@ -140,248 +111,19 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
             arrBPGuestDataAsset.Add(Asset);
         }
     }
-
-    FExcuteFunctionInfo tempEFI;
-    tempEFI.EventID = 1;
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::Invader))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::Invader))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
     
-    tempEFI.EventID = 3;
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestRoomCCTV))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestRoomCCTV))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-
-    tempEFI.EventID = 5;
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestHanging))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestHanging))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-
-    tempEFI.EventID = 6;    
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::Open205))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::Open205))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = true;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-    
-    tempEFI.EventID = 7;    
-    tempEFI.ExecuteTiming = FET_WalkerEnterCounter;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::StareUnderLight))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::StareUnderLight))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-
-    tempEFI.EventID = 8;
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestLostSignalCCTV))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestLostSignalCCTV))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-
-    tempEFI.EventID = 9;
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestInvisibleCamera))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_EventBase* Evt = EventById.FindRef(EHotelEventId::GuestInvisibleCamera))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = false;
-    arrEventFuntionList.Add(tempEFI);
-
-    ////////////랜덤 실행 이벤트 정의
-
-    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::ComplainRoomDirty))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::ComplainRoomDirty))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    mapOutbreakEventFuntion.Add(EHotelOutbreakEventId::ComplainRoomDirty, tempEFI);
-
-    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::RequestRejectCheckIn))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::RequestRejectCheckIn))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    mapOutbreakEventFuntion.Add(EHotelOutbreakEventId::RequestRejectCheckIn, tempEFI);
-
-    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::AllocateRoomGuest))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.CheckClearFunction = [this](UEventInfo* eventInfo, const FHotelTrigger& trigger)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::AllocateRoomGuest))
-            {
-                return Evt->CheckClear(this, eventInfo, trigger);
-            }
-            return false;
-        };
-    tempEFI.isEventOnlyOnce = false;
-    mapOutbreakEventFuntion.Add(EHotelOutbreakEventId::AllocateRoomGuest, tempEFI);
-
-    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::MakeDirtyRoom))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = true;
-    mapOutbreakEventFuntion.Add(EHotelOutbreakEventId::MakeDirtyRoom, tempEFI);
-
-    tempEFI.EventID = 0; //따로 메뉴얼에 표시되는 이벤트 아님
-    tempEFI.ExecuteTiming = FET_Init;
-    tempEFI.ExecuteFunction = [this](UEventInfo* eventInfo)
-        {
-            if (UHotel_OutbreakEventBase* Evt = OutbreakById.FindRef(EHotelOutbreakEventId::ImpostorRequestRejectCheckIn))
-            {
-                Evt->Execute(this, eventInfo);
-            }
-        };
-    tempEFI.isEventOnlyOnce = false;
-    tempEFI.isExcutingOnlyEvent = true;
-    mapOutbreakEventFuntion.Add(EHotelOutbreakEventId::ImpostorRequestRejectCheckIn, tempEFI);
+    arrEventFuntionList.Empty();
+    for (UHotel_EventBase* Evt : EventObjects)
+    {
+        if (!Evt) continue;
+        if (Evt->EventID == EHotelEventId::None) continue;
+        arrEventFuntionList.Add(Evt);
+    }
     SettingInitGame(false);
 }
 FGuestname UHotel_Manager::GetGenderName(bool isMan)
 {
     FGuestname tempGuestName;
-    tempGuestName.Name = "";
     for (auto& temp : arrGuestName)
     {
         if (temp.isAssigned) continue;
@@ -477,73 +219,191 @@ void UHotel_Manager::LoadGuestName() //나중에 필요하다면 데이터 에�
 
 void UHotel_Manager::SpawnGuest()
 {
-    for (int i = 0; i < 25; ++i)
-    {
-        FTimerHandle TimerHandle;
-        GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+    UWorld* World = GetWorld();
+    if (!World) return;
+    if (arrBPGuestDataAsset.Num() <= 0) return;
+
+    const int32 GuestsToSpawn = FMath::Max(0, MaxGuestsPerRoundHardCap);
+    if (GuestsToSpawn <= 0) return;
+    
+    World->GetTimerManager().ClearTimer(SpawnGuestLoopTimerHandle);
+    bStopSpawnOnSettingEvent = false;
+
+    arrWaitingEventList.Empty();
+
+    TWeakObjectPtr<UHotel_Manager> WeakThis(this);
+
+    const FVector SpawnLocation(-1300, 1147, 100);
+    const FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    const int32 BatchSize = FMath::Max(1, GuestsPerSpawnTick);
+    const float Interval = FMath::Max(0.01f, GuestSpawnTickIntervalSeconds);
+
+    int32 RemainingGuests = GuestsToSpawn;
+    SpawnGuestLoopTimerHandle = FTimerHandle();
+
+    World->GetTimerManager().SetTimer(
+        SpawnGuestLoopTimerHandle,
+        [WeakThis, SpawnLocation, SpawnRotation, BatchSize, RemainingGuests]() mutable
+        {
+            if (!WeakThis.IsValid()) return;
+
+            UWorld* LocalWorld = WeakThis->GetWorld();
+            if (!LocalWorld) return;
+
+            if (WeakThis->bStopSpawnOnSettingEvent)
             {
-                FVector SpawnLocation = FVector(-1300, 1147, 100); // 위치를 얻는 함수
-                FRotator SpawnRotation = FRotator::ZeroRotator;
-                int Rand = FMath::RandRange(0, arrBPGuestDataAsset.Num() - 1);
+                LocalWorld->GetTimerManager().ClearTimer(WeakThis->SpawnGuestLoopTimerHandle);
+                return;
+            }
+
+            if (WeakThis->arrBPGuestDataAsset.Num() <= 0)
+            {
+                LocalWorld->GetTimerManager().ClearTimer(WeakThis->SpawnGuestLoopTimerHandle);
+                return;
+            }
+
+            const int32 CanSpawn = FMath::Min(BatchSize, RemainingGuests);
+            for (int32 SpawnIdx = 0; SpawnIdx < CanSpawn; ++SpawnIdx)
+            {
+                const int32 Rand = FMath::RandRange(0, WeakThis->arrBPGuestDataAsset.Num() - 1);
                 FActorSpawnParameters SpawnParams;
-                SpawnParams.Owner = nullptr; // 필요시 세팅
+                SpawnParams.Owner = nullptr;
                 SpawnParams.Instigator = nullptr;
-                AHotel_Guest* NewGuest = GetWorld()->SpawnActor<AHotel_Guest>(arrBPGuestDataAsset[Rand]->GuestClass, SpawnLocation, SpawnRotation, SpawnParams);
-                if (NewGuest)
+
+                AHotel_Guest* NewGuest = LocalWorld->SpawnActor<AHotel_Guest>(
+                    WeakThis->arrBPGuestDataAsset[Rand]->GuestClass,
+                    SpawnLocation,
+                    SpawnRotation,
+                    SpawnParams);
+
+                if (!NewGuest) continue;
+
+                NewGuest->SetActorHiddenInGame(true);
+                NewGuest->SetActorTickEnabled(false);
+                NewGuest->SetActorEnableCollision(false);
+                if (UCharacterMovementComponent* MoveComp = NewGuest->GetCharacterMovement())
                 {
-                    NewGuest->SetActorHiddenInGame(true);
-                    NewGuest->SetActorTickEnabled(false);
-                    NewGuest->SetActorEnableCollision(false);
-                    NewGuest->GetCharacterMovement()->GravityScale = 0.0f;//일단 중력을 끄고 액티브할때 켜중;
-                    NewGuest->IsMan = arrBPGuestDataAsset[Rand]->isMan;
-                    UEventInfo* temp = NewObject<UEventInfo>();
-                    temp->EventGuest = NewGuest;
-                    arrWaitingEventList.Add(temp);
-                    arrEventGuestController.Add(GetWorld()->SpawnActor<AAI_Hotel_Guest_Default>());
-                    arrHotelGuest.Add(NewGuest);
+                    MoveComp->GravityScale = 0.0f;
                 }
-            }, 0.1 * i, false);
-    }
+                NewGuest->IsMan = WeakThis->arrBPGuestDataAsset[Rand]->isMan;
+
+                UEventInfo* temp = NewObject<UEventInfo>(WeakThis.Get());
+                temp->EventGuest = NewGuest;
+                WeakThis->arrWaitingEventList.Add(temp);
+
+                WeakThis->arrEventGuestController.Add(LocalWorld->SpawnActor<AAI_Hotel_Guest_Default>());
+                WeakThis->arrHotelGuest.Add(NewGuest);
+            }
+
+            RemainingGuests -= CanSpawn;
+            if (RemainingGuests <= 0)
+            {
+                LocalWorld->GetTimerManager().ClearTimer(WeakThis->SpawnGuestLoopTimerHandle);
+            }
+        },
+        Interval,
+        true,
+        0.0f);
 }
+
 void UHotel_Manager::SettingEvent()
 {
-    int nRandRange = arrEventFuntionList.Num() - 1;
-    int nEventGuestNum;
+    if (arrEventFuntionList.IsEmpty()) return;
+    if (arrWaitingEventList.IsEmpty()) return;
+
+    // EnterHotel 이후에는 스폰/슬롯 추가가 진행되면 arrWaitingEventList 데이터가 불안정해질 수 있으므로 중단합니다.
+    if (UWorld* World = GetWorld())
+    {
+        bStopSpawnOnSettingEvent = true;
+        World->GetTimerManager().ClearTimer(SpawnGuestLoopTimerHandle);
+    }
+
+    const int nEventGuestNum = GetEnviromentalLevel() * 4 + 4;
 
     const int EnviromentLevelLocal = GetEnviromentalLevel();
-    nEventGuestNum = nEventGuestNum = EnviromentLevelLocal * 4 + 4;
     if (Hotel_Clock) Hotel_Clock->ChangeEviromentLevel(EnviromentLevelLocal);
 
     if (EnviromentLevelLocal == 0)
     {
-        SettingReservationGuest(); //예약자 이름까지 설정후
-        Algo::RandomShuffle(arrWaitingEventList); // 랜덤으로 섞기
-        UE_LOG(LogTemp,Warning,TEXT("테스트용 세팅"));
+        SettingReservationGuest();
+        Algo::RandomShuffle(arrWaitingEventList);
+        if (arrWaitingEventList.IsEmpty()) return;
         arrWaitingEventList[0]->isNormalGuestEvent = false;
-        arrWaitingEventList[0]->FunctionInfo = arrEventFuntionList[3];
+        UHotel_EventBase* GuestHangingEvent = nullptr;
+        for (UHotel_EventBase* Evt : arrEventFuntionList)
+        {
+            if (Evt && Evt->EventID == EHotelEventId::GuestHanging)
+            {
+                GuestHangingEvent = Evt;
+                break;
+            }
+        }
+        arrWaitingEventList[0]->EventLogic =
+            GuestHangingEvent ? GuestHangingEvent : (arrEventFuntionList.IsValidIndex(0) ? arrEventFuntionList[0] : nullptr);
 
     }
     else
     {
         int nAssignmentEventNum = 0;
-        for (auto& TempEvent : arrWaitingEventList)
+        TArray<UHotel_EventBase*> OnceEvents;
+        TArray<UHotel_EventBase*> RepeatEvents;
+        OnceEvents.Reserve(arrEventFuntionList.Num());
+        RepeatEvents.Reserve(arrEventFuntionList.Num());
+
+        for (UHotel_EventBase* Evt : arrEventFuntionList)
         {
-            if (nAssignmentEventNum < nEventGuestNum)
+            if (!Evt) continue;
+            if (Evt->bEventOnlyOnce)
             {
-                nAssignmentEventNum++;
-                TempEvent->isNormalGuestEvent = false;
-                int randNum = FMath::RandRange(0, nRandRange);
-                TempEvent->FunctionInfo = arrEventFuntionList[randNum];
-                if (TempEvent->FunctionInfo.isEventOnlyOnce)
-                {
-                    arrEventFuntionList.Swap(randNum, nRandRange);
-                    nRandRange--;
-                }
+                OnceEvents.Add(Evt);
             }
             else
             {
-                TempEvent->isNormalGuestEvent = true;
+                RepeatEvents.Add(Evt);
             }
+        }
+
+        int32 onceCount = OnceEvents.Num();   // 로컬에서만 소진(선택되면 제거)
+        const int32 repeatCount = RepeatEvents.Num(); // repeat은 소진되지 않음
+
+        for (auto& TempEvent : arrWaitingEventList)
+        {
+            if (nAssignmentEventNum >= nEventGuestNum)
+            {
+                TempEvent->isNormalGuestEvent = true;
+                continue;
+            }
+
+            TempEvent->isNormalGuestEvent = false;
+            TempEvent->EventLogic = nullptr;
+
+            if (onceCount <= 0 && repeatCount <= 0)
+            {
+                break;
+            }
+            const int32 totalCount = onceCount + repeatCount;
+            const int32 pick = FMath::RandRange(0, totalCount - 1);
+            const bool bPickOnce = (pick < onceCount);
+
+            if (bPickOnce)
+            {
+                const int32 pickOnceIndex = FMath::RandRange(0, onceCount - 1);
+                TempEvent->EventLogic = OnceEvents[pickOnceIndex];
+                OnceEvents.Swap(pickOnceIndex, onceCount - 1);
+                --onceCount;
+            }
+            else
+            {
+                if (repeatCount <= 0)
+                {
+                    continue;
+                }
+                const int32 pickRepeatIndex = FMath::RandRange(0, repeatCount - 1);
+                TempEvent->EventLogic = RepeatEvents[pickRepeatIndex];
+            }
+
+            ++nAssignmentEventNum;
         }
         SettingReservationGuest();
         Algo::RandomShuffle(arrWaitingEventList);
@@ -553,10 +413,19 @@ void UHotel_Manager::SettingEvent()
 
     for (int i = 0; i < arrWaitingEventList.Num(); ++i)
     {
-        CheckExecuteFunctionTiming(FET_Assignment, arrWaitingEventList[i]->EventGuest);
+        if (arrWaitingEventList[i] && IsValid(arrWaitingEventList[i]->EventGuest))
+        {
+            CheckExecuteFunctionTiming(FET_Assignment, arrWaitingEventList[i]->EventGuest);
+        }
     }
-    Hotel_Clock->StartGameClock();
-    Hotel_CCTV->arrCameras[0]->SetCameraState(true);
+    if (Hotel_Clock)
+    {
+        Hotel_Clock->StartGameClock();
+    }
+    if (Hotel_CCTV && Hotel_CCTV->arrCameras.Num() > 0)
+    {
+        Hotel_CCTV->arrCameras[0]->SetCameraState(true);
+    }
 }
 
 void UHotel_Manager::TryCalling(AHotel_Phone* CalledPhone, FName NowCallingPhoneNum)
@@ -564,36 +433,49 @@ void UHotel_Manager::TryCalling(AHotel_Phone* CalledPhone, FName NowCallingPhone
     //CalledPhone 전화를 건 전화기 , NowCallingPhoneNum 전화기가 현재 걸고있는 전화번호
     if (IsGameEndPhase) return;
     FString InstigatorName = TEXT("Walker");
-    if (IsValid(CalledPhone) && !CalledPhone->isUserPickUpPhone
-        && IsValid(CalledPhone->PhoneWatchGuest) && !CalledPhone->PhoneWatchGuest->GuestName.IsEmpty())
+    FString CalledPlaceNumber = TEXT("");
+    if (IsValid(CalledPhone))
     {
-        InstigatorName = CalledPhone->PhoneWatchGuest->GuestName;
+        CalledPlaceNumber = CalledPhone->RegistPhoneNumber.ToString();
+        if (!CalledPhone->isUserPickUpPhone
+            && IsValid(CalledPhone->PhoneWatchGuest)
+            && !CalledPhone->PhoneWatchGuest->GuestName.IsEmpty())
+        {
+            InstigatorName = CalledPhone->PhoneWatchGuest->GuestName;
+        }
     }
 
     OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::TryCall,
         {
             { EHotelTriggerKey::Instigator, InstigatorName },
-            { EHotelTriggerKey::Place, CalledPhone->RegistPhoneNumber.ToString() },
+            { EHotelTriggerKey::Place, CalledPlaceNumber },
             { EHotelTriggerKey::Target, NowCallingPhoneNum.ToString() }
         }));
 
     //전화 예외 처리, 갯수가 적기 때문에 따로 시스템화 X
     if (ProcessCallException(CalledPhone, NowCallingPhoneNum)) return;
-    
-    if (mapRegistedPhone.Contains(NowCallingPhoneNum))
+
+    if (!IsValid(CalledPhone)) return;
+    if (IsValid(CalledPhone->aConnectedPhone))
     {
-        AHotel_Phone* CallingPhone = *mapRegistedPhone.Find(NowCallingPhoneNum);
-        if (IsValid(CallingPhone) && !IsValid(CallingPhone->aConnectedPhone) && CalledPhone != CallingPhone && !CallingPhone->isUserPickUpPhone)
+        return;
+    }
+    
+    bool bConnectTryStarted = false;
+    if (AHotel_Phone** CallingPhonePtr = mapRegistedPhone.Find(NowCallingPhoneNum))
+    {
+        AHotel_Phone* CallingPhone = *CallingPhonePtr;
+        if (IsValid(CallingPhone)
+            && !IsValid(CallingPhone->aConnectedPhone)
+            && CalledPhone != CallingPhone
+            && !CallingPhone->isUserPickUpPhone)
         {
             CallingPhone->ConnectTry(CalledPhone);
             CalledPhone->ConnectTry(CallingPhone);
-        }
-        else
-        {
-            CalledPhone->ConnectFail();
+            bConnectTryStarted = true;
         }
     }
-    else
+    if (!bConnectTryStarted)
     {
         CalledPhone->ConnectFail();
     }
@@ -601,21 +483,33 @@ void UHotel_Manager::TryCalling(AHotel_Phone* CalledPhone, FName NowCallingPhone
 
 bool UHotel_Manager::ProcessCallException(AHotel_Phone* CalledPhone, FName NowCallingPhoneNum)
 {
-    //205,305호는 등록되어있지만 통신 차단 필요
-    if (NowCallingPhoneNum == "205" || NowCallingPhoneNum == "305" || CalledPhone->RegistPhoneNumber == "205" || CalledPhone->RegistPhoneNumber == "305")
+    static const FName Num205(TEXT("205"));
+    static const FName Num305(TEXT("305"));
+    static const FName Num911(TEXT("911"));
+    const bool bNowIsBlocked = (NowCallingPhoneNum == Num205 || NowCallingPhoneNum == Num305);
+    const bool bCalledIsBlocked = (IsValid(CalledPhone)
+        && (CalledPhone->RegistPhoneNumber == Num205 || CalledPhone->RegistPhoneNumber == Num305));
+
+    if (bNowIsBlocked || bCalledIsBlocked)
     {
-        if (NowCallingPhoneNum == "205" && CalledPhone->RegistPhoneNumber == "205")
+        if (NowCallingPhoneNum == Num205 && IsValid(CalledPhone) && CalledPhone->RegistPhoneNumber == Num205)
         {
             return true; //205호 이벤트를 위해 벽열기 조건시 신호를 연결중 신호 지속
         }
-        CalledPhone->ConnectFail(); //나머지 시도는 연결 끊기
+
+        if (IsValid(CalledPhone))
+        {
+            CalledPhone->ConnectFail(); //나머지 시도는 연결 끊기
+        }
         return true;
     }
-    else if (NowCallingPhoneNum == "911") //보안팀 역할이 커진다면 Security_Operator분리 후 해당 조건문 삭제
+    if (NowCallingPhoneNum == Num911)
     {
-        //Department_Operator는 기본적으로 호텔 매니저 역할 보안팀 전화일때만 역할 바꾸는걸로 구현
-        Department_Operator->AddDialogueDataState("보안팀", EDialogueState::DS_Security);
-        Department_Operator->SetGuestDialogueDataLast(true);
+        if (IsValid(Department_Operator))
+        {
+            Department_Operator->AddDialogueDataState(TEXT("보안팀"), EDialogueState::DS_Security);
+            Department_Operator->SetGuestDialogueDataLast(true);
+        }
         return false;
     }
     return false;
@@ -903,14 +797,17 @@ void UHotel_Manager::CheckExecuteFunctionTiming(EFunctionExcuteTiming nowTiming,
     {
         if (arrExecutingEventList[i]->isAreadyExcute) continue; //이미 실행된 이벤트면 넘기고
         if (arrExecutingEventList[i]->EventGuest != TargetGuest) continue; //대상 게스트가 이벤트의 게스트가 아니면 넘기고
-        if (arrExecutingEventList[i]->FunctionInfo.ExecuteTiming == nowTiming)
+        UEventInfo* ExecutingEvent = arrExecutingEventList[i];
+        if (!ExecutingEvent) continue;
+
+        if (IsValid(ExecutingEvent->EventLogic) && ExecutingEvent->EventLogic->ExecuteTiming == nowTiming)
         {
-            arrExecutingEventList[i]->FunctionInfo.ExecuteFunction(arrExecutingEventList[i]);
-            if (arrExecutingEventList[i]->FunctionInfo.isExcutingOnlyEvent)
+            ExecutingEvent->EventLogic->Execute(this, ExecutingEvent);
+            if (ExecutingEvent->EventLogic->bExecutingOnlyEvent)
             {
                 arrExecutingEventList.RemoveAt(i); //진행중 이벤트 목록에서 제거
             }
-            break;//실행했으면 브레이크
+            //break;  //동일 게스트/동일 타이밍에 매치되는 이벤트있는 경우에도 전부 처리
         }
     }
 
@@ -967,7 +864,11 @@ bool UHotel_Manager::OnEventTriggerAction(const FHotelTrigger& Trigger)
         for (int i = arrExecutingEventList.Num() - 1; i >= 0; --i)//반복문 진행중 클리어되서 삭제되는 이벤트가 있으므로 역순으로 돌아 인덱스 문제 제거
         {
             TriggerNum = arrExecutingEventList[i]->CollectedTriggers.Num(); //이번 트리거가 추가된건지 확인하기 위해 트리거 작동전 저장
-            bool CheckClear = arrExecutingEventList[i]->FunctionInfo.CheckClearFunction(arrExecutingEventList[i], Trigger);
+            bool CheckClear = false;
+            if (IsValid(arrExecutingEventList[i]->EventLogic))
+            {
+                CheckClear = arrExecutingEventList[i]->EventLogic->CheckClear(this, arrExecutingEventList[i], Trigger);
+            }
             if (!arrExecutingEventList[i]->CollectedTriggers.IsEmpty())
             {
                 if (TriggerNum != arrExecutingEventList[i]->CollectedTriggers.Num() && arrExecutingEventList[i]->CollectedTriggers.Last() == Trigger)
@@ -1035,23 +936,31 @@ void UHotel_Manager::AddOutbreakEventList(AHotel_Guest* guest, EHotelOutbreakEve
 {
     if (eventId == EHotelOutbreakEventId::None) return;
 
-    if (mapOutbreakEventFuntion.Contains(eventId))
+    UHotel_OutbreakEventBase* Outbreak = nullptr;
+    for (UHotel_OutbreakEventBase* Evt : OutbreakEventObjects)
     {
-        const FExcuteFunctionInfo FoundEvent = *mapOutbreakEventFuntion.Find(eventId);
-        UEventInfo* temp = NewObject<UEventInfo>();
-        temp->EventGuest = guest;
-        temp->FunctionInfo = FoundEvent;
-        temp->isNormalGuestEvent = false;
-        arrOutbreakEventList.Add(temp);
-        arrExecutingEventList.Add(temp);
-
-        if (!arrExecutingEventList.IsEmpty())
+        if (Evt && Evt->OutbreakId == eventId)
         {
-            CheckExecuteFunctionTiming(FET_Init, guest);
-            if (WalkerNowLocation == "Counter")
-            {
-                CheckExecuteFunctionTiming(FET_WalkerEnterCounter, guest);
-            }
+            Outbreak = Evt;
+            break;
+        }
+    }
+
+    if (!Outbreak) return;
+
+    UEventInfo* temp = NewObject<UEventInfo>();
+    temp->EventGuest = guest;
+    temp->EventLogic = Outbreak;
+    temp->isNormalGuestEvent = false;
+    arrOutbreakEventList.Add(temp);
+    arrExecutingEventList.Add(temp);
+
+    if (!arrExecutingEventList.IsEmpty())
+    {
+        CheckExecuteFunctionTiming(FET_Init, guest);
+        if (WalkerNowLocation == "Counter")
+        {
+            CheckExecuteFunctionTiming(FET_WalkerEnterCounter, guest);
         }
     }
 }
@@ -1063,41 +972,57 @@ void UHotel_Manager::RemoveExecutingEvent(UEventInfo* TartgetEvent)
 
 void UHotel_Manager::SettingReservationGuest()
 {
+    if (arrWaitingEventList.IsEmpty()) return;
     int MaxReservationNum = FMath::RandRange(0, 1);
-    
-    FString TempSimliarName;
-      
-    TArray<int> RandArr;
+    for (auto& eventInfo : arrWaitingEventList)
+    {
+        if (eventInfo && IsValid(eventInfo->EventGuest))
+        {
+            eventInfo->EventGuest->IsReservationGuest = false;
+        }
+    }
 
-    for (int i = 0 ;  i < arrWaitingEventList.Num(); i++)
+    TArray<int> RandArr;
+    RandArr.Reserve(arrWaitingEventList.Num());
+    for (int i = 0 ; i < arrWaitingEventList.Num(); i++)
     {
         RandArr.Add(i);
     }
-    Algo::RandomShuffle(RandArr); // 셔플
+    Algo::RandomShuffle(RandArr);
 
     for (int i = 0 ; i < MaxReservationNum; i++)
     {
         int32 Index = RandArr[i];
-        FGuestname tempGuestName = GetGenderName(arrWaitingEventList[Index]->EventGuest->IsMan);
-        arrWaitingEventList[Index]->EventGuest->SetGuestName(tempGuestName.Name);
-        arrReservationGuest.Add(tempGuestName.Name); //예약손님 리스트에 추가
-        arrWaitingEventList[Index]->EventGuest->IsReservationGuest = true;
-        
-        if (i +1 < RandArr.Num() && FMath::RandRange(0, 3) < 1) // 1/4 확률로 예약자와 비슷한 이름 할당 성별에 상관없이
+        if (!arrWaitingEventList.IsValidIndex(Index) || !IsValid(arrWaitingEventList[Index]->EventGuest)) continue;
+
+        AHotel_Guest* Guest = arrWaitingEventList[Index]->EventGuest;
+        FGuestname tempGuestName = GetGenderName(Guest->IsMan);
+
+        Guest->SetGuestName(tempGuestName.Name);
+        arrReservationGuest.Add(tempGuestName.Name);
+        Guest->IsReservationGuest = true;
+
+        if (i + 1 < RandArr.Num() && FMath::RandRange(0, 3) < 1)
         {
             int32 SimilarIndex = RandArr[++i];
-            arrWaitingEventList[SimilarIndex]->EventGuest->SetGuestName(tempGuestName.SimilarName);
-            arrWaitingEventList[SimilarIndex]->EventGuest->IsReservationGuest = true;
+            if (!arrWaitingEventList.IsValidIndex(SimilarIndex) || !IsValid(arrWaitingEventList[SimilarIndex]->EventGuest)) continue;
+
+            AHotel_Guest* SimilarGuest = arrWaitingEventList[SimilarIndex]->EventGuest;
+            SimilarGuest->SetGuestName(tempGuestName.SimilarName);
+            SimilarGuest->IsReservationGuest = true;
         }
     }
+
     for (const auto& eventInfo : arrWaitingEventList)
     {
-        if (eventInfo->EventGuest->GuestName.IsEmpty()) // 예약관련된 손님이 아니라면 랜덤 할당
+        if (!eventInfo || !IsValid(eventInfo->EventGuest)) continue;
+
+        if (eventInfo->EventGuest->GuestName.IsEmpty())
         {
             FGuestname tempGuestName = GetGenderName(eventInfo->EventGuest->IsMan);
             eventInfo->EventGuest->SetGuestName(tempGuestName.Name);
         }
-    } 
+    }
 }
 
 FString UHotel_Manager::GetAllocateRoomNum()
@@ -1234,11 +1159,14 @@ void UHotel_Manager::SetGameEnd(EGameEndReason Reason)
 {
     if (IsGameEndPhase) return;
     IsGameEndPhase = true;
-    OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::GameEnd));//해결못하고 엔드할시 패널티 적용
+    OnEventTriggerAction(FHotelTrigger::Make(EHotelTriggerType::GameEnd));
 
     for (int i = nNowExcutingEvent; i < arrWaitingEventList.Num(); i++)
     {
-        arrReservationGuest.Remove(arrWaitingEventList[i]->EventGuest->GuestName);
+        if (arrWaitingEventList[i] && IsValid(arrWaitingEventList[i]->EventGuest))
+        {
+            arrReservationGuest.Remove(arrWaitingEventList[i]->EventGuest->GuestName);
+        }
     } //게임 종료시 호텔 들어오기전 예약손님은 노쇼로 감점사항 X
 
     for (auto & temp : arrReservationGuest)
@@ -1294,19 +1222,47 @@ void UHotel_Manager::SettingInitGame(bool isContinue)
     mapRegistedPlace.Empty();
     mapRegistedRoom.Empty();
     mapHotelMesh.Empty();
-    arrEventGuestController.Empty();
-    arrReservationGuest.Empty();
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(GameEndTimer);
+        World->GetTimerManager().ClearTimer(SpawnGuestLoopTimerHandle);
+        for (auto& temp : arrExecutingEventList)
+        {
+            if (temp)
+            {
+                World->GetTimerManager().ClearTimer(temp->EventTimer);
+            }
+        }
+    }
+
+    arrExecutingEventList.Empty();
+    arrOutbreakEventList.Empty();
     arrWaitingEventList.Empty();
+
+    for (auto* Ctrl : arrEventGuestController)
+    {
+        if (IsValid(Ctrl))
+        {
+            Ctrl->Destroy();
+        }
+    }
+    arrEventGuestController.Empty();
+
+    for (auto* Guest : arrHotelGuest)
+    {
+        if (IsValid(Guest))
+        {
+            Guest->Destroy();
+        }
+    }
+    arrHotelGuest.Empty();
+
+    arrReservationGuest.Empty();
     if (HRService)
     {
         HRService->ResetForNewGame();
     }
-
-    for (auto & temp : arrExecutingEventList)
-    {
-        GetWorld()->GetTimerManager().ClearTimer(temp->EventTimer);
-    }
-    arrExecutingEventList.Empty();
 
     IsContinueSetting = isContinue;
     IsGameEndPhase = false;

@@ -11,6 +11,9 @@
 UHotel_Outbreak_AllocateRoomGuest::UHotel_Outbreak_AllocateRoomGuest()
 {
 	OutbreakId = EHotelOutbreakEventId::AllocateRoomGuest;
+	ExecuteTiming = FET_Init;
+	bEventOnlyOnce = false;
+	bExecutingOnlyEvent = false;
 }
 
 void UHotel_Outbreak_AllocateRoomGuest::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)

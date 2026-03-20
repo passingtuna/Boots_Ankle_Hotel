@@ -25,7 +25,7 @@ void UHotel_Event_GuestLostSignalCCTV::Execute(UHotel_Manager* Manager, UEventIn
 		EventInfo->EventGuest->IsWierdFaceLook = true;
 		EventInfo->EventGuest->IsCheckTrigger = true;
 	}
-	Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+	Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 }
 
 bool UHotel_Event_GuestLostSignalCCTV::CheckClear(UHotel_Manager* Manager, UEventInfo* EventInfo, const FHotelTrigger& Trigger)
