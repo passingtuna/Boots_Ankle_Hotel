@@ -125,6 +125,9 @@ private:
 public:
     void LoadGuestName();
     void SetHotelWalker(AHotel_Walker* Walker) { Hotel_Walker = Walker; };
+    void RegisterWalkerAndStartGuestPrep(AHotel_Walker* Walker);
+    void HandleWalkerEnterHotelForRoundSetup();
+    void ScheduleDelayedGameOver(int32 HRPenalty, const FString& HRReason, EGameEndReason Reason, float DelaySeconds = 3.f);
     void SetKeyTray(AHotel_KeyTray* KeyTrayObj) { KeyTray = KeyTrayObj; };
     void SetHotel_CCTV(AHotel_CCTV* cctv) { Hotel_CCTV = cctv; };
     void SetStreetLight(AHotel_Light* light) { StreetLight = light; };

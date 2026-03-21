@@ -4,6 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Hotel_WalkerLocomotionComponent.h"
+#include "Hotel_WalkerInteractionComponent.h"
+#include "Hotel_WalkerUIComponent.h"
+#include "Hotel_WalkerPeepingComponent.h"
+#include "Hotel_WalkerEntranceIntroComponent.h"
 #include "Hotel_Walker.generated.h"
 
 class USpringArmComponent;
@@ -11,22 +16,22 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class AHotel_Door;
-class UInteractive_Box;
 class IInteractable_Object;
 struct FInputActionValue;
 class UHotel_Manager;
-class UPhoneDialUI;
-class UMenualUI;
-class UDialogueUI;
+class UUserWidget;
 class AAI_Hotel_Guest_Default;
 class AHotel_Phone;
 class AHotel_Guest;
+class UAudioComponent;
 
 UCLASS(Blueprintable)
 class BOOTS_ANKLE_HOTEL_API AHotel_Walker : public ACharacter
 {
 	GENERATED_BODY()
 
+public:
+	AHotel_Walker();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnhancedInput, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* DefaultIMC;
@@ -46,23 +51,12 @@ class BOOTS_ANKLE_HOTEL_API AHotel_Walker : public ACharacter
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = EnhancedInput, meta = (AllowPrivateAccess = "true"))
     UInputAction* IA_QuickAction;
 
-    AHotel_Door* PeepingCamera;
 private :
-    
-    IInteractable_Object* interactObject;
-
-    bool isHit = false;
-    bool isRun = false;
-    bool isPeeping = false;
     bool isCatchNeck = false;
 
-    bool isEnteringHotel = false;
-	
-    float InteractionTraceElapsed = 0.0f;
+    void ApplyRestraintBaseState();
+    void ScheduleDelayedFailViaManager(const FString& HRReason);
 
-    FTimerHandle FootStepTimer;
-    UFUNCTION()
-    void StopMovingSound();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -85,42 +79,18 @@ public:
     void AutoAction(const FInputActionValue& Value);
 
     void PlaySound(FName SoundName);
+    UAudioComponent* GetWalkerAudioComponent() const { return AudioComp; }
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
     void Interactive(const FInputActionValue& Value);
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UInteractive_Box> InteractiveBoxWidgetClass;
-    UInteractive_Box* Interactive_Box;
-
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UUserWidget> CrosshairWidgetClass;
-    UUserWidget* Crosshair;
-
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UUserWidget> InteractiveWidgetClass;
-    UUserWidget* InteractiveWidget;
-
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UPhoneDialUI> PhoneUiWidgetClass;
-    UPhoneDialUI* PhoneUi;
-
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UMenualUI> MenualUiWidgetClass;
-    UMenualUI* MenualUi;
-
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = UI)
-    TSubclassOf<UDialogueUI> DialogueUiWidgetClass;
-    UDialogueUI* DialogueUi;
-
-
     APlayerController* PlayerController;
     UHotel_Manager* Hotel_Manager;
-    void SetPeeping(bool peeping, AHotel_Door* peepingEye) {
-        isPeeping = peeping;  PeepingCamera = peepingEye;
-    };
+    void SetPeeping(bool peeping, AHotel_Door* peepingEye);
+    AHotel_Door* GetActivePeepingDoor() const;
     void ViewUIInteractiveMessageBox();
+    void HideInteractionPromptWidget();
     void ViewUIPhoneDial(AHotel_Phone* interactedPhone);
     void ViewUIMenual();
     void ViewUIDialogue(AHotel_Guest * DialogueGuest , AHotel_Phone* Phone = NULL);
@@ -143,6 +113,21 @@ public:
 
     UPROPERTY(EditAnyWhere,BlueprintReadOnly,Category = Sound)
     TMap<FName, USoundBase*> SoundEffectMap;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Walker")
+    TObjectPtr<UHotel_WalkerLocomotionComponent> LocomotionComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Walker")
+    TObjectPtr<UHotel_WalkerInteractionComponent> InteractionComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Walker")
+    TObjectPtr<UHotel_WalkerUIComponent> UIComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Walker")
+    TObjectPtr<UHotel_WalkerPeepingComponent> PeepingComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Walker")
+    TObjectPtr<UHotel_WalkerEntranceIntroComponent> EntranceIntroComp;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Sound)
     UAudioComponent* AudioComp;

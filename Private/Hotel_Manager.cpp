@@ -217,6 +217,46 @@ void UHotel_Manager::LoadGuestName() //나중에 필요하다면 데이터 에�
     Algo::RandomShuffle(arrGuestName);
 }
 
+void UHotel_Manager::RegisterWalkerAndStartGuestPrep(AHotel_Walker* Walker)
+{
+    if (!Walker)
+    {
+        return;
+    }
+    SetHotelWalker(Walker);
+    SpawnGuest();
+}
+
+void UHotel_Manager::HandleWalkerEnterHotelForRoundSetup()
+{
+    SettingEvent();
+}
+
+void UHotel_Manager::ScheduleDelayedGameOver(int32 HRPenalty, const FString& HRReason, EGameEndReason Reason, float DelaySeconds)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    FTimerHandle TmpHandle;
+    TWeakObjectPtr<UHotel_Manager> WeakThis(this);
+    const FString ReasonCopy = HRReason;
+    World->GetTimerManager().SetTimer(
+        TmpHandle,
+        [WeakThis, HRPenalty, ReasonCopy, Reason]()
+        {
+            if (UHotel_Manager* M = WeakThis.Get())
+            {
+                M->MinusHRScore(HRPenalty, ReasonCopy);
+                M->SetGameEnd(Reason);
+            }
+        },
+        DelaySeconds,
+        false);
+}
+
 void UHotel_Manager::SpawnGuest()
 {
     UWorld* World = GetWorld();
