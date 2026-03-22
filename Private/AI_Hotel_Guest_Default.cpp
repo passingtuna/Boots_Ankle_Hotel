@@ -13,6 +13,11 @@
 #include "Hotel_Phone.h"
 #include "Hotel_Bed.h"
 
+AAI_Hotel_Guest_Default::AAI_Hotel_Guest_Default()
+{
+	PrimaryActorTick.bCanEverTick = false;
+}
+
 void AAI_Hotel_Guest_Default::BeginPlay()
 {
 
@@ -126,10 +131,6 @@ void AAI_Hotel_Guest_Default::MoveToTargetLocation(FVector TargetLocation)
     {
         MoveToLocation(Projected.Location, 20.f);
     }
-}
-void AAI_Hotel_Guest_Default::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
 }
 
 void AAI_Hotel_Guest_Default::OnMoveCompletedCallback(FAIRequestID RequestID, const EPathFollowingResult::Type Result)

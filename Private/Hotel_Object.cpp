@@ -12,7 +12,7 @@
 // Sets default values
 AHotel_Object::AHotel_Object()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
     QuickActionName = "없음";
     RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
 
@@ -45,12 +45,6 @@ void AHotel_Object::SetDefaultInteractiveMessage()
         TempString += TEXT("\n[E] : 퀵 액션 : ") + QuickActionName.ToString();
     }
     InteractMassage = TempString;
-}
-
-// Called every frame
-void AHotel_Object::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AHotel_Object::ExecuteActionByName(FName ActionName)

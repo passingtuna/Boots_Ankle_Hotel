@@ -53,7 +53,7 @@
 #include "Hotel_Outbreak_MakeDirtyRoom.h"
 #include "Hotel_Outbreak_ImpostorRequestRejectCheckIn.h"
 
-void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
+void UHotel_Manager::EnsurePersistenceAndHRInitialized()
 {
     if (!PersistenceService)
     {
@@ -65,7 +65,10 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
         HRService = NewObject<UHotel_HRService>(this);
         HRService->ResetForNewGame();
     }
+}
 
+void UHotel_Manager::EnsureRuntimeEventObjectsCreated()
+{
     if (EventObjects.IsEmpty())
     {
         EventObjects.Add(NewObject<UHotel_Event_Invader>(this));
@@ -85,7 +88,10 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
         OutbreakEventObjects.Add(NewObject<UHotel_Outbreak_MakeDirtyRoom>(this));
         OutbreakEventObjects.Add(NewObject<UHotel_Outbreak_ImpostorRequestRejectCheckIn>(this));
     }
+}
 
+void UHotel_Manager::LoadPrimaryAssetDialogueAndGuestData()
+{
     TArray<FPrimaryAssetId> AssetIDs;
     UAssetManager::Get().GetPrimaryAssetIdList(FPrimaryAssetType("DialogueDataAsset"), AssetIDs);
 
@@ -111,14 +117,31 @@ void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
             arrBPGuestDataAsset.Add(Asset);
         }
     }
-    
+}
+
+void UHotel_Manager::RebuildActiveEventFunctionList()
+{
     arrEventFuntionList.Empty();
     for (UHotel_EventBase* Evt : EventObjects)
     {
-        if (!Evt) continue;
-        if (Evt->EventID == EHotelEventId::None) continue;
+        if (!Evt)
+        {
+            continue;
+        }
+        if (Evt->EventID == EHotelEventId::None)
+        {
+            continue;
+        }
         arrEventFuntionList.Add(Evt);
     }
+}
+
+void UHotel_Manager::Initialize(FSubsystemCollectionBase& Collection)
+{
+    EnsurePersistenceAndHRInitialized();
+    EnsureRuntimeEventObjectsCreated();
+    LoadPrimaryAssetDialogueAndGuestData();
+    RebuildActiveEventFunctionList();
     SettingInitGame(false);
 }
 FGuestname UHotel_Manager::GetGenderName(bool isMan)

@@ -17,8 +17,7 @@
 // Sets default values
 AHotel_Guest_Room::AHotel_Guest_Room()
 {
-    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
     bGuestIn = false;
 }
 
@@ -91,12 +90,6 @@ void AHotel_Guest_Room::InitChildActorComponent()
     {
         aToilet->SetRoomNumber(RoomNumber);
     }
-}
-
-void AHotel_Guest_Room::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-
 }
 
 void AHotel_Guest_Room::MakeRoomDirty(int state)

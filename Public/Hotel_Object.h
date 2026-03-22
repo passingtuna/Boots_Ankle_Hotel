@@ -44,8 +44,6 @@ public:
     UHotel_Manager* Hotel_Manager;
 
     ACharacter* InteractedHuman;
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
     virtual TMap<FName, TFunction<void()>> GetAvailableAction() override { return availableAction; };
 	virtual void ExecuteActionByName(FName ActionName) override;
     virtual void SetHighLightInteractive(bool OnOff) override;

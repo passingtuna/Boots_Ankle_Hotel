@@ -8,9 +8,7 @@
 // Sets default values
 AHotel_Light::AHotel_Light()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 // Called when the game starts or when spawned
@@ -29,12 +27,6 @@ void AHotel_Light::BeginPlay()
     {
         GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>()->SetStreetLight(this);
     }
-}
-
-// Called every frame
-void AHotel_Light::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AHotel_Light::SetSoftFlickering()

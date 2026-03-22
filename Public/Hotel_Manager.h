@@ -122,6 +122,12 @@ private:
     // SettingEvent는 arrWaitingEventList를 기반으로 이름/이벤트를 초기화하므로, 스폰이 동시에 진행되면 데이터 불일치가 날 수 있습니다.
     bool bStopSpawnOnSettingEvent = false;
 
+    /** Initialize() 단계별 분리: 서비스·이벤트 오브젝트·에셋 로드 책임을 나눔 */
+    void EnsurePersistenceAndHRInitialized();
+    void EnsureRuntimeEventObjectsCreated();
+    void LoadPrimaryAssetDialogueAndGuestData();
+    void RebuildActiveEventFunctionList();
+
 public:
     void LoadGuestName();
     void SetHotelWalker(AHotel_Walker* Walker) { Hotel_Walker = Walker; };

@@ -31,8 +31,6 @@ protected:
 	virtual void BeginPlay() override;
     bool bGuestIn;
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Room")
     FName RoomNumber;
 

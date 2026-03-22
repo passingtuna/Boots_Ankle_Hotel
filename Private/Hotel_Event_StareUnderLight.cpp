@@ -120,7 +120,7 @@ bool UHotel_Event_StareUnderLight::CheckClear(UHotel_Manager* Manager, UEventInf
 		}
 
 		World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
-		if (EventInfo->EventGuest->bWasLookingAtGuest) EventInfo->EventGuest->bWasLookingAtGuest = false;
+		EventInfo->EventGuest->ClearWalkerLookingAtGuestFlag();
 
 		if ((!EventInfo->CollectedTriggers.IsEmpty() && EventInfo->CollectedTriggers.Last().Type != Trigger.Type))
 		{

@@ -19,8 +19,7 @@
 // Sets default values
 ALevel_Manager::ALevel_Manager()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true; 
+	PrimaryActorTick.bCanEverTick = false;
 
     AudioCompBGM = CreateDefaultSubobject<UAudioComponent>(TEXT("BGMAudio"));
     AudioCompRinging = CreateDefaultSubobject<UAudioComponent>(TEXT("RingAudio"));

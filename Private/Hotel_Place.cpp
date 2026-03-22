@@ -9,7 +9,7 @@
 
 AHotel_Place::AHotel_Place()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
     PlaceVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerBox"));
     RootComponent = PlaceVolume;
@@ -33,11 +33,6 @@ void AHotel_Place::BeginPlay()
     }
 }
 
-void AHotel_Place::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
 void AHotel_Place::PersonInPlace( UPrimitiveComponent* OverlappedComp, AActor* OtherActor,  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (OtherActor && OtherActor != this)

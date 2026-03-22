@@ -6,7 +6,10 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 
-
+AHotel_Clock::AHotel_Clock()
+{
+	PrimaryActorTick.bCanEverTick = true;
+}
 
 void AHotel_Clock::BeginPlay()
 {
