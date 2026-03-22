@@ -15,7 +15,9 @@ UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Clock : public AHotel_Object
 {
 	GENERATED_BODY()
-	
+public:
+	AHotel_Clock();
+
     virtual void BeginPlay() override;
 
     virtual void Tick(float DeltaTime) override;
@@ -33,7 +35,6 @@ class BOOTS_ANKLE_HOTEL_API AHotel_Clock : public AHotel_Object
     UFUNCTION()
     void AddMinute();
 
-public:
     UPROPERTY(EditAnyWhere,BlueprintReadWrite, Category = "Needle")
     USceneComponent* HourNeedleComp;
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Needle")

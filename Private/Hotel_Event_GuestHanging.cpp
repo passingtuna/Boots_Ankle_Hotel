@@ -69,7 +69,7 @@ bool UHotel_Event_GuestHanging::CheckClear(UHotel_Manager* Manager, UEventInfo* 
 			EventInfo->EventGuest->TeleportTo(FVector(-327, 839, 94), FRotator(0, 0, 0));
 			EventInfo->EventGuest->CheckOutGuest();
 			EventInfo->CollectedTriggers.Add(Trigger);
-			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+			Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 			return true;
 		}
 	}
@@ -79,7 +79,7 @@ bool UHotel_Event_GuestHanging::CheckClear(UHotel_Manager* Manager, UEventInfo* 
 			&& GuestNamePayload
 			&& *GuestNamePayload == EventInfo->EventGuest->GuestName)
 		{
-			Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+			Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 			return true;
 		}
 	}

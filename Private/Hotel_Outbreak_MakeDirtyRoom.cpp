@@ -9,6 +9,9 @@
 UHotel_Outbreak_MakeDirtyRoom::UHotel_Outbreak_MakeDirtyRoom()
 {
 	OutbreakId = EHotelOutbreakEventId::MakeDirtyRoom;
+	ExecuteTiming = FET_Init;
+	bEventOnlyOnce = false;
+	bExecutingOnlyEvent = true;
 }
 
 void UHotel_Outbreak_MakeDirtyRoom::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)

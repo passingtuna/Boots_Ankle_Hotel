@@ -48,12 +48,13 @@ class UEventInfo : public UObject
     GENERATED_BODY()
 public:
     UPROPERTY()
+    TObjectPtr<UHotel_EventBase> EventLogic;
+    UPROPERTY()
     TObjectPtr<AHotel_Guest> EventGuest;
     FTimerHandle EventTimer;
     bool isNormalGuestEvent = true;
     bool isAreadyExcute = false;
     TArray<FHotelTrigger> CollectedTriggers;
-    FExcuteFunctionInfo FunctionInfo;
 };
 
 
@@ -92,13 +93,7 @@ private:
     TArray<TObjectPtr<UHotel_EventBase>> EventObjects;
 
     UPROPERTY()
-    TMap<EHotelEventId, TObjectPtr<UHotel_EventBase>> EventById;
-
-    UPROPERTY()
     TArray<TObjectPtr<UHotel_OutbreakEventBase>> OutbreakEventObjects;
-
-    UPROPERTY()
-    TMap<EHotelOutbreakEventId, TObjectPtr<UHotel_OutbreakEventBase>> OutbreakById;
 
     UPROPERTY()
     TMap<FName, AHotel_Phone*> mapRegistedPhone;
@@ -116,9 +111,29 @@ private:
 
     bool IsContinueSetting;
 
+    UPROPERTY(EditDefaultsOnly, Category="Guest Spawn")
+    int32 MaxGuestsPerRoundHardCap = 26;
+    UPROPERTY(EditDefaultsOnly, Category="Guest Spawn")
+    int32 GuestsPerSpawnTick = 1;
+    UPROPERTY(EditDefaultsOnly, Category="Guest Spawn")
+    float GuestSpawnTickIntervalSeconds = 0.05f;
+
+    // EnterHotel/SettingEvent 진입 시점에 스폰을 더 이상 진행하지 않기 위한 락.
+    // SettingEvent는 arrWaitingEventList를 기반으로 이름/이벤트를 초기화하므로, 스폰이 동시에 진행되면 데이터 불일치가 날 수 있습니다.
+    bool bStopSpawnOnSettingEvent = false;
+
+    /** Initialize() 단계별 분리: 서비스·이벤트 오브젝트·에셋 로드 책임을 나눔 */
+    void EnsurePersistenceAndHRInitialized();
+    void EnsureRuntimeEventObjectsCreated();
+    void LoadPrimaryAssetDialogueAndGuestData();
+    void RebuildActiveEventFunctionList();
+
 public:
     void LoadGuestName();
     void SetHotelWalker(AHotel_Walker* Walker) { Hotel_Walker = Walker; };
+    void RegisterWalkerAndStartGuestPrep(AHotel_Walker* Walker);
+    void HandleWalkerEnterHotelForRoundSetup();
+    void ScheduleDelayedGameOver(int32 HRPenalty, const FString& HRReason, EGameEndReason Reason, float DelaySeconds = 3.f);
     void SetKeyTray(AHotel_KeyTray* KeyTrayObj) { KeyTray = KeyTrayObj; };
     void SetHotel_CCTV(AHotel_CCTV* cctv) { Hotel_CCTV = cctv; };
     void SetStreetLight(AHotel_Light* light) { StreetLight = light; };
@@ -152,6 +167,9 @@ private:
     EGameEndReason EndReason;
 
     int nWalkingDay;
+
+    // SpawnGuest용 "단일 반복 타이머" 핸들 (프레임 분산/스폰 폭주 방지)
+    FTimerHandle SpawnGuestLoopTimerHandle;
 public:
     void CheckManagerCallingForHR();
     void CheckInGuestRoom(AHotel_Guest * guest, FName roomNum);
@@ -196,8 +214,7 @@ public:
  //-----------------------이벤트----------------------------------
  private:
      int nNowExcutingEvent;
-     TArray <FExcuteFunctionInfo> arrEventFuntionList;
-     TMap <EHotelOutbreakEventId, FExcuteFunctionInfo> mapOutbreakEventFuntion;
+     TArray<TObjectPtr<UHotel_EventBase>> arrEventFuntionList;
      TArray <TObjectPtr<UEventInfo>> arrOutbreakEventList;
      TArray <TObjectPtr<UEventInfo>> arrWaitingEventList;
 

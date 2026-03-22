@@ -22,7 +22,7 @@ void AHotel_Toilet_Door :: Tick(float DeltaTime)
         else
         {
             Hinge->SetRelativeLocation(FVector(-140.0f, 0.0f, 0.0f));
-            isMoving = false;
+            SetDoorMovementActive(false);
         }
     }
     else
@@ -34,7 +34,7 @@ void AHotel_Toilet_Door :: Tick(float DeltaTime)
         else
         {
             Hinge->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-            isMoving = false;
+            SetDoorMovementActive(false);
         }
     }
 }

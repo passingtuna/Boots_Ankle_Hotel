@@ -244,8 +244,19 @@ void UDialogueUI::PauseDialogue()
     {
         NowGuest->SetGuestDialogueData(NowDialogueData, NowGuestDialogueIndex);
         NowGuest->SetDialoguePause(NowGuestDialogueIndex , NowDialogueIndex);
-
-        GetWorld()->GetTimerManager().SetTimer(DialogueTimer, [this]() {NowGuest->GetAIController()->DecreasePatienceCount(true); }, 10 , false);
+        UWorld* World = GetWorld();
+        if (World)
+        {
+            TWeakObjectPtr<UDialogueUI> WeakThis(this);
+            World->GetTimerManager().SetTimer(DialogueTimer, [WeakThis]()
+                {
+                    if (!WeakThis.IsValid() || !IsValid(WeakThis->NowGuest)) return;
+                    if (AAI_Hotel_Guest_Default* AI = WeakThis->NowGuest->GetAIController())
+                    {
+                        AI->DecreasePatienceCount(true);
+                    }
+                }, 10, false);
+        }
     }
     Hotel_Walker->HideUIName("Dialogue");
 
@@ -469,17 +480,21 @@ void UDialogueUI::SecurityReport()
 
 void UDialogueUI::DisconnectCalling()
 {
-    GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+    UWorld* World = GetWorld();
+    if (!World) return;
+    TWeakObjectPtr<UDialogueUI> WeakThis(this);
+    World->GetTimerManager().SetTimer(TimerHandle, [WeakThis]()
         {
-            if (IsValid(OverlayPhone))
+            if (!WeakThis.IsValid()) return;
+            if (IsValid(WeakThis->OverlayPhone))
             {
-                OverlayPhone->aConnectedPhone->Disconnect();
-                OverlayPhone->Disconnect();
-                OverlayPhone = NULL;
+                WeakThis->OverlayPhone->aConnectedPhone->Disconnect();
+                WeakThis->OverlayPhone->Disconnect();
+                WeakThis->OverlayPhone = nullptr;
             }
-            isPrevDisConnect = true;
+            WeakThis->isPrevDisConnect = true;
 
-        },1.0f, false); //말은 하고 끊는다는 느낌으로 1초뒤에 전화 끊김 사운드
+        }, 1.0f, false); //말은 하고 끊는다는 느낌으로 1초뒤에 전화 끊김 사운드
 }
 
 void UDialogueUI::SetDialogueIndex()

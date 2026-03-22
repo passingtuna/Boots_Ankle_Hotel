@@ -33,10 +33,10 @@ AHotel_Guest::AHotel_Guest()
     AIControllerClass = AAI_Hotel_Guest_Default::StaticClass();
 
     AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio"));
+    PerceptionComp = CreateDefaultSubobject<UHotel_Guest_PerceptionComponent>(TEXT("PerceptionComp"));
     IsAutoActionDoor = true;
     IsCalledWalker = false;
     IsLookingPlayer = false;
-    bWasLookingAtGuest = false;
     GuestName = "";
     IsMan = false;
     IsAlreadyNeckShaking = false;
@@ -52,16 +52,7 @@ void AHotel_Guest::BeginPlay()
     Super::BeginPlay();
     Hotel_Walker = Cast<AHotel_Walker>(GetWorld()->GetFirstPlayerController()->GetPawn());
 
-    FString TempString;
-    if (availableAction.Num() > 0)
-    {
-        TempString += TEXT("[우클릭] 상호작용 메뉴 : ") + ObjectName;
-    }
-    if (QuickActionName != "없음")
-    {
-        TempString += TEXT("\n[E] : 퀵 액션 : ") + QuickActionName.ToString();
-    }
-    InteractMassage = TempString;
+    UpdateInteractMessage();
 
     GetComponents<USkeletalMeshComponent>(MeshComponents);
 
@@ -84,6 +75,10 @@ void AHotel_Guest::BeginPlay()
         }
     }
     Hotel_Manager = GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>();
+    if (PerceptionComp)
+    {
+        PerceptionComp->Initialize(this);
+    }
     FaceCollision = FindComponentByClass<USphereComponent>();
     CapsuleComponent = FindComponentByClass<UCapsuleComponent>();
     IsHanging = false;
@@ -115,102 +110,17 @@ void AHotel_Guest::UpdateGuestName()
 void AHotel_Guest::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-    if (Hotel_Walker && IsLookingPlayer)
+    if (PerceptionComp)
     {
-        SetLookActor(Hotel_Walker);
+        PerceptionComp->TickPerception(DeltaTime);
     }
+}
 
-    if (Hotel_Walker && IsReadyToNeckShaking && !IsAlreadyNeckShaking)
+void AHotel_Guest::ClearWalkerLookingAtGuestFlag()
+{
+    if (PerceptionComp)
     {
-        NeckShakeCheckElapsed += DeltaTime;
-        // 목 흔들기/캐치 체크는 너무 자주 할 필요가 없으므로 약간의 주기를 둔다.
-        if (NeckShakeCheckElapsed < 0.05f) // 20fps 수준으로 제한
-        {
-            return;
-        }
-        NeckShakeCheckElapsed = 0.0f;
-
-        float Distance = FVector::Dist(GetActorLocation(), Hotel_Walker->GetActorLocation());
-        if (Distance < 200)
-        {
-            CatchingPlayer();
-            if (IsWierdHanging) Hotel_Manager->UpdateDefualtLevelMenual(5);
-        }
-    }
-
-    if (Hotel_Walker && Hotel_Manager && IsWierdStareUnderLight)
-    {
-        WeirdStareCheckElapsed += DeltaTime;
-        // 가로등 밑 응시 판정은 연산량이 크므로 주기를 줄인다.
-        if (WeirdStareCheckElapsed < 0.1f)
-        {
-            return;
-        }
-        WeirdStareCheckElapsed = 0.0f;
-
-        FHitResult Hits;
-        FCollisionQueryParams Params;
-        Params.AddIgnoredActor(this);
-        Params.AddIgnoredActor(Hotel_Walker);
-        Params.AddIgnoredActor(AutoDoor);
-        Params.AddIgnoredComponent(CapsuleComponent);
-        FVector Start = GetActorLocation();
-        FVector End = Hotel_Walker->GetActorLocation();
-        Start.Z += 67; //시선 위치에서 
-        End.Z += 67;    // 시선위치
-
-        bool bIsLookingAtGuest = false;
-        bool isHit = GetWorld()->LineTraceSingleByChannel(Hits, Start, End, ECC_Visibility, Params);
-        if (!isHit)//캐릭터 사이에 아무것도 없으면
-        {
-            FVector TempVec1 = (Start - End);
-            FVector TempVec2 = Hotel_Walker->FollowCamera->GetForwardVector();
-
-            FVector TempVec3 = TempVec1;
-            TempVec3.Z = 0;
-            FVector TempVec4 = TempVec2;
-            TempVec4.Z = 0;
-
-            float Dot = FVector::DotProduct(TempVec3.GetSafeNormal(), TempVec4.GetSafeNormal()); //캐릭터의 수평 각도를 계산
-            if (Dot > 0.7f) // 수평 방향으로 정면이다
-            {
-                float DeltaZ = (FaceCollision->GetComponentLocation().Z +10);
-                float HorizontalDist = FVector(GetActorLocation() - Hotel_Walker->GetActorLocation()).Size2D();
-                float VerticalAngle = FMath::RadiansToDegrees(FMath::Atan2(DeltaZ, HorizontalDist));    //
-                float CameraPitch = Hotel_Walker->FollowCamera->GetComponentRotation().Pitch;
-
-                float UpperLimit = 0.32f * VerticalAngle + 27.4f;
-                float LowerLimit = -1.12f * VerticalAngle - 27.4f;
-
-                bIsLookingAtGuest = (CameraPitch >= LowerLimit && CameraPitch <= UpperLimit);
-            }
-        }
-        if (bIsLookingAtGuest != bWasLookingAtGuest)
-        {
-            if (bIsLookingAtGuest)
-            {
-                Hotel_Manager->OnEventTriggerAction(
-                    FHotelTrigger::Make(EHotelTriggerType::LookStateChange,
-                        {
-                            { EHotelTriggerKey::Instigator, TEXT("Walker") },
-                            { EHotelTriggerKey::Target, GuestName },
-                            { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::Look) },
-                        }));
-            }
-            else
-            {
-                Hotel_Manager->OnEventTriggerAction(
-                    FHotelTrigger::Make(EHotelTriggerType::LookStateChange,
-                        {
-                            { EHotelTriggerKey::Instigator, TEXT("Walker") },
-                            { EHotelTriggerKey::Target, GuestName },
-                            { EHotelTriggerKey::ObjectState, HotelTriggerStateToString(EHotelObjectState::NoLook) },
-                        }));
-            }
-
-            bWasLookingAtGuest = bIsLookingAtGuest;
-        }
+        PerceptionComp->ClearWalkerLookingAtGuestFlag();
     }
 }
 // Called to bind functionality to input
@@ -247,7 +157,7 @@ void AHotel_Guest::SetHighLightInteractive(bool OnOff)
             {
                 if (MeshComp)
                 {
-                    MeshComp->SetCustomDepthStencilValue(1);  // 예: 1
+                    MeshComp->SetCustomDepthStencilValue(1);
                 }
             }
         }
@@ -257,7 +167,7 @@ void AHotel_Guest::SetHighLightInteractive(bool OnOff)
             {
                 if (MeshComp)
                 {
-                    MeshComp->SetCustomDepthStencilValue(0);  // 예: 1
+                    MeshComp->SetCustomDepthStencilValue(0);
                 }
             }
         }

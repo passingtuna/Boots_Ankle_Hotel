@@ -106,7 +106,7 @@ bool UHotel_Event_Open205::CheckClear(UHotel_Manager* Manager, UEventInfo* Event
 			}
 		}
 
-		Manager->UpdateDefualtLevelMenual(EventInfo->FunctionInfo.EventID);
+		Manager->UpdateDefualtLevelMenual(static_cast<int>(EventID));
 		EventInfo->CollectedTriggers.Add(Trigger);
 		World->GetTimerManager().ClearTimer(EventInfo->EventTimer);
 	}

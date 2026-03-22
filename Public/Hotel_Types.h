@@ -76,7 +76,7 @@ struct FRoomInfo
 
 struct FGuestname
 {
-    bool isMan;
+    bool isMan = false;
     bool isAssigned = false;
     FString Name;
     FString SimilarName;
@@ -182,16 +182,6 @@ struct FHotelTrigger
 FString HotelTriggerStateToString(EHotelObjectState State);
 bool HotelTriggerStateEquals(const FString* Value, EHotelObjectState State);
 
-struct FExcuteFunctionInfo
-{
-    int EventID;
-    EFunctionExcuteTiming ExecuteTiming = FET_Init;
-    bool isEventOnlyOnce = false;
-    bool isExcutingOnlyEvent = false;
-    TFunction<void(UEventInfo* eventInfo)> ExecuteFunction;
-    TFunction<bool(UEventInfo* eventInfo, const FHotelTrigger& trigger)> CheckClearFunction;
-};
-
 struct FEventInfo
 {
     UPROPERTY()
@@ -200,7 +190,6 @@ struct FEventInfo
     bool isNormalGuestEvent = true;
     bool isAreadyExcute = false;
     TArray<FHotelTrigger> CollectedTriggers;
-    FExcuteFunctionInfo FunctionInfo;
 };
 
 struct FHRRecord

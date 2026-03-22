@@ -22,7 +22,8 @@ UCLASS()
 class BOOTS_ANKLE_HOTEL_API AAI_Hotel_Guest_Default : public AAIController
 {
     GENERATED_BODY()
-    virtual void Tick(float DeltaTime) override;
+public:
+    AAI_Hotel_Guest_Default();
 private:
     bool isComplained;
     int nPatience;

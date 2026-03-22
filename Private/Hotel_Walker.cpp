@@ -16,101 +16,63 @@
 #include "Hotel_Object.h"
 #include "Hotel_Guest.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Components/TextBlock.h"
 #include "Components/SphereComponent.h"
 #include "Level_Manager.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Interactable_Object.h"
 #include "Camera/CameraComponent.h"
 #include "Components/AudioComponent.h"
-#include "PhoneDialUI.h"
-#include "MenualUI.h"
-#include "DialogueUI.h"
 #include "Hotel_Menual.h"
 #include "DialogueDataAsset.h"
+#include "Hotel_Types.h"
 
-// Called when the game starts or when spawned
+AHotel_Walker::AHotel_Walker()
+{
+	LocomotionComp = CreateDefaultSubobject<UHotel_WalkerLocomotionComponent>(TEXT("LocomotionComp"));
+	InteractionComp = CreateDefaultSubobject<UHotel_WalkerInteractionComponent>(TEXT("InteractionComp"));
+	UIComp = CreateDefaultSubobject<UHotel_WalkerUIComponent>(TEXT("UIComp"));
+	PeepingComp = CreateDefaultSubobject<UHotel_WalkerPeepingComponent>(TEXT("PeepingComp"));
+	EntranceIntroComp = CreateDefaultSubobject<UHotel_WalkerEntranceIntroComponent>(TEXT("EntranceIntroComp"));
+}
 
 void AHotel_Walker::BeginPlay()
 {
 	Super::BeginPlay();
-    //AdudioComp
-    isRun = false;
+    // 위젯 생성/입력 기반 처리에 필요하므로 BeginPlay에서 먼저 확보합니다.
+    PlayerController = Cast<APlayerController>(GetController());
+
+    if (LocomotionComp)
+    {
+        LocomotionComp->Initialize(this);
+    }
     FollowCamera = FindComponentByClass<UCameraComponent>();
     CaptureComp = FindComponentByClass<USceneCaptureComponent2D>();
-    if (InteractiveBoxWidgetClass)
+    if (UIComp)
     {
-        Interactive_Box = CreateWidget<UInteractive_Box>(PlayerController, InteractiveBoxWidgetClass);
-        if (Interactive_Box)
-        {
-            Interactive_Box->AddToViewport();
-            Interactive_Box->SetVisibility(ESlateVisibility::Hidden);
-            Interactive_Box->SetHotelWalker(this);
-        }
+        UIComp->Initialize(this, PlayerController);
+    }
+    if (InteractionComp)
+    {
+        InteractionComp->Initialize(this);
+    }
+    if (PeepingComp)
+    {
+        PeepingComp->Initialize(this);
     }
 
-    if (CrosshairWidgetClass)
-    {
-        Crosshair = CreateWidget<UUserWidget>(PlayerController, CrosshairWidgetClass);
-        if (Crosshair)
-        {
-            Crosshair->AddToViewport();
-            Crosshair->SetVisibility(ESlateVisibility::Visible);
-        }
-    }
-
-    if (InteractiveWidgetClass)
-    {
-        InteractiveWidget = CreateWidget<UUserWidget>(PlayerController, InteractiveWidgetClass);
-        if (InteractiveWidget)
-        {
-            InteractiveWidget->AddToViewport();
-            InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-
-    if (PhoneUiWidgetClass)
-    {
-        PhoneUi = CreateWidget<UPhoneDialUI>(PlayerController, PhoneUiWidgetClass);
-        if (PhoneUi)
-        {
-            PhoneUi->AddToViewport();
-            PhoneUi->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-
-    if (MenualUiWidgetClass)
-    {
-        MenualUi = CreateWidget<UMenualUI>(PlayerController, MenualUiWidgetClass);
-        if (MenualUi)
-        {
-            MenualUi->AddToViewport(10);
-            MenualUi->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-
-    if (DialogueUiWidgetClass)
-    {
-        DialogueUi = CreateWidget<UDialogueUI>(PlayerController, DialogueUiWidgetClass);
-        if (DialogueUi)
-        {
-            DialogueUi->AddToViewport();
-            DialogueUi->SetVisibility(ESlateVisibility::Hidden);
-        }
-    }
-
-
-    UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+    UEnhancedInputLocalPlayerSubsystem* Subsystem = PlayerController
+        ? ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())
+        : nullptr;
     if (Subsystem)
     {
         Subsystem->AddMappingContext(DefaultIMC, 0);
     }
 
     Hotel_Manager = GetWorld()->GetGameInstance()->GetSubsystem<UHotel_Manager>();
-
-    Hotel_Manager->SetHotelWalker(this);
-    isPeeping = false;
-    Hotel_Manager->SpawnGuest(); //워커까지 준비완료후 손님 준비
+    if (Hotel_Manager)
+    {
+        Hotel_Manager->RegisterWalkerAndStartGuestPrep(this);
+    }
     //EnterHotel();
     //메인 메뉴
     AddControllerPitchInput(-10); //메인메뉴 띄우기 뷰 조정
@@ -120,114 +82,39 @@ void AHotel_Walker::BeginPlay()
 void AHotel_Walker::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    if (isEnteringHotel)
+    if (EntranceIntroComp && EntranceIntroComp->TickIntro(DeltaTime, this, LocomotionComp, UIComp))
     {
-        FRotator MyRotator = Controller->GetControlRotation();
-        if (MyRotator.Pitch > 5)
-        {
-            AddControllerPitchInput(0.5f);
-            if (MyRotator.Pitch > 30)
-            {
-                MyRotator.Pitch = 5;
-                Controller->SetControlRotation(MyRotator);
-            }
-        }
-        else if (GetActorLocation().Y < 1400)
-        {
-            const FRotator Rotation = Controller->GetControlRotation();
-            const FRotator YawRotation(0, Rotation.Yaw, 0);
-            FVector2D MovementVector = FVector2D(0, 0.6f);
-            const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-            AddMovementInput(ForwardDirection, MovementVector.Y);
-            PlaySound("Walk");
-        }
-        else
-        {
-            GetWorld()->GetTimerManager().SetTimer(FootStepTimer, this, &AHotel_Walker::StopMovingSound, 0.2f, false);
-            GetMouseControl();
-            isEnteringHotel = false;
-        }
         return;
     }
-    
-    if (isPeeping || PlayerController->bShowMouseCursor || isCatchNeck)
+
+    if ((PeepingComp && PeepingComp->IsPeeping()) || isCatchNeck || (PlayerController && PlayerController->bShowMouseCursor))
     {
-        if (interactObject)
+        if (InteractionComp)
         {
-            interactObject->SetHighLightInteractive(false);
-            InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
+            InteractionComp->ClearInteractionFocusForBlockedState();
         }
         return;
     }
 
-    if (FollowCamera)
+    if (FollowCamera && InteractionComp)
     {
-        // 상호작용 라인트레이스는 너무 자주 할 필요가 없으므로 주기를 둔다.
-        InteractionTraceElapsed += DeltaTime;
-        if (InteractionTraceElapsed < 0.05f)
-        {
-            return;
-        }
-        InteractionTraceElapsed = 0.0f;
-
-        FVector Start = FollowCamera->GetComponentLocation();
-        FVector End = Start + FollowCamera->GetForwardVector() * 200.f;
-
-        FHitResult Hit;
-        FCollisionQueryParams Params;
-        Params.AddIgnoredActor(this);
-        //라인 트레이스
-        isHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
-
-        if (interactObject)
-        {
-            interactObject->SetHighLightInteractive(false);
-            InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
-            interactObject = NULL;
-        }
-        if (isHit)
-        {
-            AActor* HitActor = Hit.GetActor();
-
-            //액터가 UInteractable_Object 인터페이스를 상속받았는지 확인
-            if (HitActor)
-            {
-                if (HitActor->GetClass()->ImplementsInterface(UInteractable_Object::StaticClass()))
-                {
-                    interactObject = Cast<IInteractable_Object>(HitActor);
-                    interactObject->SetHighLightInteractive(true);
-                    ViewUIInteractiveMessageBox();
-                    if (AHotel_Guest*temp = Cast<AHotel_Guest>(HitActor))
-                    {
-                        temp->CheckWalkerLookingFace(Start, End);
-                    }
-                }
-            }
-            else
-            {
-                if (interactObject)
-                {
-                    interactObject->SetHighLightInteractive(false);
-                    InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
-                    interactObject = NULL;
-                }
-            }
-        }
+        InteractionComp->TickInteraction(DeltaTime, FollowCamera);
     }
 }
 
 void AHotel_Walker::Interactive(const FInputActionValue& Value)
 {
     if (isCatchNeck) return;
-    if (!isPeeping)
+    if (!PeepingComp || !PeepingComp->IsPeeping())
     {
-        if (interactObject && Interactive_Box)
+        IInteractable_Object* Target = InteractionComp ? InteractionComp->GetCurrentInteractable() : nullptr;
+        if (Target && UIComp && UIComp->GetInteractiveBox())
         {
-            if (interactObject->GetAvailableAction().IsEmpty()) return;//오브젝트가 할수있는 행동이 없다면 리턴
-            GiveMouseControl(Interactive_Box);
+            if (Target->GetAvailableAction().IsEmpty()) return;//오브젝트가 할수있는 행동이 없다면 리턴
+            UIComp->GiveMouseControlTo(UIComp->GetInteractiveBox());
             TurnOffHighLight();
-            HideUIName("InteractMessage");
-            Interactive_Box->ShowActionButtons(interactObject);
+            UIComp->HideByLegacyName(FName(TEXT("InteractMessage")));
+            UIComp->GetInteractiveBox()->ShowActionButtons(Target);
         }
     }
 }
@@ -235,11 +122,11 @@ void AHotel_Walker::Interactive(const FInputActionValue& Value)
 void AHotel_Walker::AutoAction(const FInputActionValue& Value)
 {
     if (isCatchNeck) return;
-    if (!isPeeping)
+    if (!PeepingComp || !PeepingComp->IsPeeping())
     {
-        if (interactObject)
+        if (IInteractable_Object* Target = InteractionComp ? InteractionComp->GetCurrentInteractable() : nullptr)
         {
-            interactObject->ExecuteQuickAction();
+            Target->ExecuteQuickAction();
         }
     }
 }
@@ -274,67 +161,64 @@ void AHotel_Walker::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 void AHotel_Walker::MoveEnd(const FInputActionValue& Value)
 {
-    GetWorld()->GetTimerManager().SetTimer(FootStepTimer,this, &AHotel_Walker::StopMovingSound ,0.2f,false);
+    if (LocomotionComp)
+    {
+        LocomotionComp->ProcessMoveEnd(Value);
+    }
 }
 
 void AHotel_Walker::RunStart(const FInputActionValue& Value)
 {
-    isRun = true;
+    if (LocomotionComp)
+    {
+        LocomotionComp->ProcessRunStarted(Value);
+    }
 }
 
 void AHotel_Walker::RunEnd(const FInputActionValue& Value)
 {
-    isRun = false;
-}
-void AHotel_Walker::StopMovingSound()
-{
-    AudioComp->Stop();
-    AudioComp->SetSound(NULL);
+    if (LocomotionComp)
+    {
+        LocomotionComp->ProcessRunEnded(Value);
+    }
 }
 
 void AHotel_Walker::Move(const FInputActionValue& Value)
 {
     if (isCatchNeck) return;
-    if (PlayerController->bShowMouseCursor) return;
-    FVector2D MovementVector = Value.Get<FVector2D>();
-    if (!isRun)
-    {
-        PlaySound("Walk");
-        MovementVector *= 0.6;
-    }
-    else
-    {
-        PlaySound("Run");
-    }
+    if (PlayerController && PlayerController->bShowMouseCursor) return;
 
-    if (isPeeping)
+    if (PeepingComp && PeepingComp->IsPeeping())
     {
         StopPeeping();
+        return;
     }
-    else
+
+    if (LocomotionComp)
     {
-        if (Controller != nullptr)
-        {
-            const FRotator Rotation = Controller->GetControlRotation();
-            const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-            const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-            const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-            AddMovementInput(ForwardDirection, MovementVector.Y);
-            AddMovementInput(RightDirection,   MovementVector.X);
-        }
+        LocomotionComp->ProcessMoveInput(Value);
     }
+}
+
+void AHotel_Walker::SetPeeping(bool peeping, AHotel_Door* peepingEye)
+{
+    if (PeepingComp)
+    {
+        PeepingComp->SetPeepingState(peeping, peepingEye);
+    }
+}
+
+AHotel_Door* AHotel_Walker::GetActivePeepingDoor() const
+{
+    return PeepingComp ? PeepingComp->GetActivePeepingDoor() : nullptr;
 }
 
 void AHotel_Walker::StopPeeping()
 {
-    if (!isPeeping) return;
-    PlayerController->SetViewTargetWithBlend(this);
-    isPeeping = false;
-    PeepingCamera->PeepingEnd();
-    PeepingCamera = NULL;
+    if (PeepingComp)
+    {
+        PeepingComp->StopPeeping();
+    }
 }
 
 void AHotel_Walker::Look(const FInputActionValue& Value)
@@ -342,12 +226,9 @@ void AHotel_Walker::Look(const FInputActionValue& Value)
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
     if (isCatchNeck) return;
-    if (isPeeping)
+    if (PeepingComp && PeepingComp->IsPeeping())
     {
-        if(PeepingCamera)
-        {
-            PeepingCamera->MovePeepingEye(LookAxisVector);
-        }
+        PeepingComp->ApplyPeepingLook(LookAxisVector);
     }
     else
     {
@@ -362,32 +243,24 @@ void AHotel_Walker::Look(const FInputActionValue& Value)
 
 void AHotel_Walker::GiveMouseControl(UUserWidget* FocusWidget)
 {
-    if (PlayerController)
+    if (UIComp)
     {
-        PlayerController->bShowMouseCursor = true;
-        FInputModeUIOnly InputModeData;
-        if (FocusWidget)
-        {
-            InputModeData.SetWidgetToFocus(FocusWidget->TakeWidget()); // 포커스를 UI로
-        }
-        InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock); // 마우스 자유롭게
-        PlayerController->SetInputMode(InputModeData);
-        Crosshair->SetVisibility(ESlateVisibility::Hidden);
+        UIComp->GiveMouseControlTo(FocusWidget);
     }
 }
 void AHotel_Walker::TurnOffHighLight()
 {
-    if(interactObject)interactObject->SetHighLightInteractive(false);
+    if (InteractionComp)
+    {
+        InteractionComp->TurnOffHighlightOnly();
+    }
 }
 void AHotel_Walker::GetMouseControl()
 {
-    if (PlayerController)
+    if (UIComp)
     {
-        FInputModeGameOnly InputModeData;
-        PlayerController->SetInputMode(InputModeData);
-        PlayerController->bShowMouseCursor = false;
+        UIComp->ReleaseMouseToGame();
     }
-    Crosshair->SetVisibility(ESlateVisibility::Visible);
 }
 
 void AHotel_Walker::PlaySound(FName SoundName)
@@ -407,165 +280,120 @@ void AHotel_Walker::PlaySound(FName SoundName)
 
 void AHotel_Walker::ViewUIInteractiveMessageBox()
 {
-    if (InteractiveWidget)
+    if (UIComp && InteractionComp)
     {
-        UTextBlock* Text = Cast<UTextBlock>(InteractiveWidget->GetWidgetFromName(TEXT("InteractText")));
-        Text->SetText(FText::FromString(interactObject->GetInteractMessage()));
-        InteractiveWidget->SetVisibility(ESlateVisibility::Visible);
+        UIComp->UpdateInteractionPrompt(InteractionComp->GetCurrentInteractable());
+    }
+}
+
+void AHotel_Walker::HideInteractionPromptWidget()
+{
+    if (UIComp)
+    {
+        UIComp->HideInteractionPrompt();
     }
 }
 void AHotel_Walker::ViewUIPhoneDial(AHotel_Phone* interactedPhone)
 {
-    TurnOffHighLight();
-    if (PhoneUi)
+    if (UIComp)
     {
-        GiveMouseControl(PhoneUi);
-        PhoneUi->SetVisibility(ESlateVisibility::Visible);
-        PhoneUi->SetPhoneObject(interactedPhone);
+        UIComp->ViewPhoneDial(this, interactedPhone);
     }
 }
 
 void AHotel_Walker::ViewUIMenual()
 {
-    TurnOffHighLight();
-    if (MenualUi)
+    if (UIComp)
     {
-        GiveMouseControl(MenualUi);
-        MenualUi->InitMenual(this);
-        MenualUi->SetVisibility(ESlateVisibility::Visible);
+        UIComp->ViewManual(this);
     }
 }
 
 void AHotel_Walker::ViewUIDialogue(AHotel_Guest* DialogueGuest, AHotel_Phone * Phone)
 {
-    TurnOffHighLight();
-    HideUIName("InteractMessage");
-    if (DialogueUi)
+    if (UIComp)
     {
-        GiveMouseControl(DialogueUi);
-        DialogueUi->SetDialogueGuest(DialogueGuest , Phone);
-        DialogueUi->SetHotelWalker(this);
-        DialogueUi->SetVisibility(ESlateVisibility::Visible);
+        UIComp->ViewDialogue(this, DialogueGuest, Phone);
     }
 }
 void AHotel_Walker::HideUIName(FName UIName)
 {
-    if (UIName == "InteractBox")
+    if (UIComp)
     {
-        Interactive_Box->SetVisibility(ESlateVisibility::Hidden);
-    }
-    else if (UIName == "InteractMessage")
-    {
-        InteractiveWidget->SetVisibility(ESlateVisibility::Hidden);
-    }
-    else if (UIName == "Menual")
-    {
-        MenualUi->SetVisibility(ESlateVisibility::Hidden);
-    }
-    else if (UIName == "Dialogue")
-    {
-       DialogueUi->SetVisibility(ESlateVisibility::Hidden);
-    }
-    else if (UIName == "Phone")
-    {
-        PhoneUi->SetVisibility(ESlateVisibility::Hidden);
+        UIComp->HideByLegacyName(UIName);
     }
 }
 
 bool AHotel_Walker::IsViewUIName(FName UIName)
 {
-    if (UIName == "Phone")
-    {
-        if (PhoneUi && PhoneUi->GetVisibility() == ESlateVisibility::Visible)
-        {
-            return true;
-        }
-    }
-    else if (UIName == "InteractBox")
-    {
-        if (Interactive_Box && Interactive_Box->GetVisibility() == ESlateVisibility::Visible)
-        {
-            return true;
-        }
-    }
-    else if (UIName == "InteractMessage")
-    {
-        if (InteractiveWidget && InteractiveWidget->GetVisibility() == ESlateVisibility::Visible)
-        {
-            return true;
-        }
-    }
-    else if (UIName == "Menual")
-    {
-        if (MenualUi && MenualUi->GetVisibility() == ESlateVisibility::Visible)
-        {
-            return true;
-        }
-    }
-    else if (UIName == "Dialogue")
-    {
-        if (DialogueUi && DialogueUi->GetVisibility() == ESlateVisibility::Visible)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return UIComp && UIComp->IsLegacyNameVisible(UIName);
 }
 
 bool AHotel_Walker::IsInteractThisObject(IInteractable_Object* testObject)
 {
-    if (interactObject && interactObject == testObject)
-    {
-        return true;
-    }
-    return false;
+    return InteractionComp && InteractionComp->IsTargeting(testObject);
 }
 
 
-void AHotel_Walker::SetCatching(AHotel_Guest* CatchingGuest)
+void AHotel_Walker::ApplyRestraintBaseState()
 {
-    if (isCatchNeck) return;
-
     isCatchNeck = true;
-
     if (!bUseControllerRotationYaw)
     {
-        GetCharacterMovement()->bOrientRotationToMovement = false; // 이동 방향으로 자동 회전 X
+        if (UCharacterMovementComponent* Move = GetCharacterMovement())
+        {
+            Move->bOrientRotationToMovement = false;
+        }
         bUseControllerRotationYaw = false;
     }
-    //PlayerController->ClientStartCameraShake(UBP_CatchShake::StaticClass());
+    if (UCapsuleComponent* Cap = GetCapsuleComponent())
+    {
+        Cap->SetCollisionProfileName(TEXT("NoCollision"));
+    }
+}
 
-    FVector MyLocation = GetActorLocation();
-    FVector TargetLocation = CatchingGuest->GetActorLocation();
+void AHotel_Walker::ScheduleDelayedFailViaManager(const FString& HRReason)
+{
+    if (Hotel_Manager)
+    {
+        Hotel_Manager->ScheduleDelayedGameOver(100, HRReason, EGameEndReason::GER_Dead, 3.f);
+    }
+}
 
-    FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(MyLocation, TargetLocation);
-    SetActorRotation(FRotator(0, LookAtRot.Yaw, 0)); // 피치와 롤은 무시하고 Yaw만 사용 (수평 회전만)
+void AHotel_Walker::SetCatching(AHotel_Guest* CatchingGuest)
+{
+    if (isCatchNeck || !CatchingGuest)
+    {
+        return;
+    }
 
-    PlayerController->SetControlRotation(LookAtRot); 
-    
-    UCapsuleComponent *temp = GetComponentByClass<UCapsuleComponent>();
+    ApplyRestraintBaseState();
 
-    temp->SetCollisionProfileName("NoCollision");
+    const FVector MyLocation = GetActorLocation();
+    const FVector TargetLocation = CatchingGuest->GetActorLocation();
+    const FRotator LookAtRot = UKismetMathLibrary::FindLookAtRotation(MyLocation, TargetLocation);
+    SetActorRotation(FRotator(0, LookAtRot.Yaw, 0));
+    if (PlayerController)
+    {
+        PlayerController->SetControlRotation(LookAtRot);
+    }
 
-    FTimerHandle EndGameTimer;
-    GetWorld()->GetTimerManager().SetTimer(EndGameTimer, [this]()
-        {
-            Hotel_Manager->MinusHRScore(100, TEXT("사망으로 인한 근무지 이탈"));
-            Hotel_Manager->SetGameEnd(EGameEndReason::GER_Dead);
-        }
-    , 3.0f, false);
-
+    ScheduleDelayedFailViaManager(TEXT("사망으로 인한 근무지 이탈"));
 }
 
 void AHotel_Walker::EnterHotel()
 {
-    isEnteringHotel = true;
-    Hotel_Manager->SettingEvent(); 
-    if (MenualUi)
+    if (EntranceIntroComp)
     {
-        MenualUi->SetGameStart();
-        MenualUi->InitMenualText();
+        EntranceIntroComp->StartIntro();
+    }
+    if (Hotel_Manager)
+    {
+        Hotel_Manager->HandleWalkerEnterHotelForRoundSetup();
+    }
+    if (UIComp)
+    {
+        UIComp->NotifyGameStartForManual();
     }
 }
 
@@ -581,37 +409,24 @@ void AHotel_Walker::ShowActorFromCamera(AActor* targetActor)
 
 void AHotel_Walker::HangingNeck(FTransform RopeTrans)
 {
+    ApplyRestraintBaseState();
 
-    isCatchNeck = true;
-    if (!bUseControllerRotationYaw)
+    if (UCharacterMovementComponent* Move = GetCharacterMovement())
     {
-        GetCharacterMovement()->bOrientRotationToMovement = false; // 이동 방향으로 자동 회전 X
-        bUseControllerRotationYaw = false;
+        Move->GravityScale = 0.0f;
+        Move->Velocity.Z = 0.0f;
     }
 
-    if (GetCharacterMovement()) //중력 끄기
-    {
-        GetCharacterMovement()->GravityScale = 0.0f;
-        GetCharacterMovement()->Velocity.Z = 0.0f;
-    }
-
-    UCapsuleComponent* temp = GetComponentByClass<UCapsuleComponent>();
-    temp->SetCollisionProfileName("NoCollision");
-    FVector relativeOffset(0, -5, -80);
-    FVector worldPos = RopeTrans.TransformPosition(relativeOffset);
+    const FVector RelativeOffset(0, -5, -80);
+    const FVector WorldPos = RopeTrans.TransformPosition(RelativeOffset);
     FRotator EditedRot = RopeTrans.Rotator();
     EditedRot.Pitch -= 20;
-    SetActorRotation(FRotator(0, EditedRot.Yaw, 0)); // 피치와 롤은 무시하고 Yaw만 사용 (수평 회전만)
-    PlayerController->SetControlRotation(EditedRot);
-    TeleportTo(worldPos, RopeTrans.Rotator());
+    SetActorRotation(FRotator(0, EditedRot.Yaw, 0));
+    if (PlayerController)
+    {
+        PlayerController->SetControlRotation(EditedRot);
+    }
+    TeleportTo(WorldPos, RopeTrans.Rotator());
 
-
-    FTimerHandle EndGameTimer;
-    GetWorld()->GetTimerManager().SetTimer(EndGameTimer, [this]()
-        {
-            Hotel_Manager->MinusHRScore(100, TEXT("근무중 실종"));
-            Hotel_Manager->SetGameEnd(EGameEndReason::GER_Dead);
-        }
-    , 3.0f, false);
-
+    ScheduleDelayedFailViaManager(TEXT("근무중 실종"));
 }

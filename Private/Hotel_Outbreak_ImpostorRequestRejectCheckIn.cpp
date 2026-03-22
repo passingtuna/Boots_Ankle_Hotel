@@ -9,6 +9,9 @@
 UHotel_Outbreak_ImpostorRequestRejectCheckIn::UHotel_Outbreak_ImpostorRequestRejectCheckIn()
 {
 	OutbreakId = EHotelOutbreakEventId::ImpostorRequestRejectCheckIn;
+	ExecuteTiming = FET_Init;
+	bEventOnlyOnce = false;
+	bExecutingOnlyEvent = true;
 }
 
 void UHotel_Outbreak_ImpostorRequestRejectCheckIn::Execute(UHotel_Manager* Manager, UEventInfo* EventInfo)

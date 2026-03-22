@@ -7,8 +7,7 @@
 // Sets default values
 AHotel_CCTV_Camera::AHotel_CCTV_Camera()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 // Called when the game starts or when spawned
@@ -26,12 +25,6 @@ void AHotel_CCTV_Camera::BeginPlay()
         CameraComp->PostProcessSettings.WeightedBlendables.Array[0].Weight = 1;
     }
     SetCameraState(false);
-}
-
-// Called every frame
-void AHotel_CCTV_Camera::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AHotel_CCTV_Camera::SetCameraState(bool state)

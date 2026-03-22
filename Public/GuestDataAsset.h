@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Hotel_Types.h"
 #include "GuestDataAsset.generated.h"
 
 /**
@@ -20,5 +21,5 @@ public:
     TSubclassOf<AHotel_Guest> GuestClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    bool isMan;        
+    bool isMan = false;
 };

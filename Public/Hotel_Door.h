@@ -18,7 +18,12 @@ UCLASS()
 class BOOTS_ANKLE_HOTEL_API AHotel_Door : public AHotel_Object
 {
 	GENERATED_BODY()
+public:
+	AHotel_Door();
+
 protected:
+	void SetDoorMovementActive(bool bActive);
+
     bool isOpen;
     bool isLock;
     bool isInside;

@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "Hotel_Types.h"
 #include "Interactable_Object.h"
+#include "Hotel_Guest_PerceptionComponent.h"
 #include "Hotel_Guest.generated.h"
 
 class UHotel_Manager;
@@ -47,7 +48,6 @@ public:
     bool IsWierdStareUnderLight;
 
     bool IsReservationGuest;
-    bool bWasLookingAtGuest;
     FString InteractMassage;
     FString ObjectName;
     FString GuestName;
@@ -77,9 +77,6 @@ public:
     bool IsAutoActionDoor;
     bool IsCalledWalker;
 
-    float NeckShakeCheckElapsed = 0.0f;
-    float WeirdStareCheckElapsed = 0.0f;
-
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound, meta = (AllowPrivateAccess = "true"))
@@ -95,6 +92,9 @@ public:
 
     UGuestAnimInstance* BedyAnimInstance;
     UGuestFaceAnimInstance* FaceAnimInstance;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Guest")
+    TObjectPtr<UHotel_Guest_PerceptionComponent> PerceptionComp;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -145,6 +145,7 @@ public:
     void ReadyToRotate();
     void CheckWalkerLookingFace(FVector GazeLocation, FVector PlayerGaze);
     void CatchingPlayer();
+    void ClearWalkerLookingAtGuestFlag();
     void SetAIController(AAI_Hotel_Guest_Default * controller) {AIController = controller;};
     AAI_Hotel_Guest_Default* GetAIController() { return AIController; };
 

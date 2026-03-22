@@ -9,6 +9,19 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+
+AHotel_Door::AHotel_Door()
+{
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+}
+
+void AHotel_Door::SetDoorMovementActive(bool bActive)
+{
+	isMoving = bActive;
+	SetActorTickEnabled(bActive);
+}
+
 void AHotel_Door::BeginPlay()
 {
     Super::BeginPlay();
@@ -20,7 +33,7 @@ void AHotel_Door::BeginPlay()
     isOpen = false;
     isLock = false;
     isInside = false;
-    isMoving = false;
+    SetDoorMovementActive(false);
 
     isActivePeepingFaceInside = false;
     isActivePeepingFaceOutside = false;
@@ -49,7 +62,7 @@ void AHotel_Door::Tick(float DeltaTime)
             else
             {
                 Hinge->SetRelativeRotation(FRotator(0.0f, 90, 0.0f));
-                isMoving = false;
+                SetDoorMovementActive(false);
             }
         }
         else
@@ -61,7 +74,7 @@ void AHotel_Door::Tick(float DeltaTime)
             else
             {
                 Hinge->SetRelativeRotation(FRotator(0.0f, -90, 0.0f));
-                isMoving = false;
+                SetDoorMovementActive(false);
             }
         }
     } 
@@ -73,7 +86,7 @@ void AHotel_Door::Tick(float DeltaTime)
             if (Hinge->GetRelativeRotation().Yaw < 0)
             {
                 Hinge->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
-                isMoving = false;
+                SetDoorMovementActive(false);
                 PlaySound("Clash");
                 DoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
                 DoorMesh->SetCollisionResponseToAllChannels(ECR_Block);
@@ -85,7 +98,7 @@ void AHotel_Door::Tick(float DeltaTime)
             if (Hinge->GetRelativeRotation().Yaw > 0)
             {
                 Hinge->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
-                isMoving = false;
+                SetDoorMovementActive(false);
                 PlaySound("Clash");
                 DoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
                 DoorMesh->SetCollisionResponseToAllChannels(ECR_Block);
@@ -109,7 +122,7 @@ void AHotel_Door::ToggleOpenByWalker()
     {
         PlaySound("Close");
         isOpen = false;
-        isMoving = true;
+        SetDoorMovementActive(true);
     }
     else
     {
@@ -117,7 +130,7 @@ void AHotel_Door::ToggleOpenByWalker()
         {
             PlaySound("Open");
             isOpen = true;
-            isMoving = true;
+            SetDoorMovementActive(true);
             DoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
             DoorMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
             DoorMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
@@ -177,7 +190,7 @@ void AHotel_Door::ToggleOpen()
     {
         PlaySound("Close");
         isOpen = false;
-        isMoving = true;
+        SetDoorMovementActive(true);
     }
     else
     {
@@ -185,7 +198,7 @@ void AHotel_Door::ToggleOpen()
         {
             PlaySound("Open");
             isOpen = true;
-            isMoving = true;
+            SetDoorMovementActive(true);
             DoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
             DoorMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
             DoorMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
@@ -363,7 +376,7 @@ void AHotel_Door::GuestOpen(AHotel_Guest* Guest)
     {
         PlaySound("Open");
         isOpen = true;
-        isMoving = true;
+        SetDoorMovementActive(true);
         DoorMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
         DoorMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
         DoorMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
@@ -390,6 +403,6 @@ void AHotel_Door::GuestClose(AHotel_Guest* Guest)
     {
         PlaySound("Close");
         isOpen = false;
-        isMoving = true;
+        SetDoorMovementActive(true);
     }
 }
